@@ -16,14 +16,12 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;font-family:'JetBrains Mono',monospace;font-size:13px;background:var(--bg);color:var(--text);overflow-x:hidden}
 
-/* Grid BG */
 body::before{content:'';position:fixed;inset:0;
   background-image:linear-gradient(rgba(0,229,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.025) 1px,transparent 1px);
   background-size:48px 48px;pointer-events:none;z-index:0}
 
 .app{position:relative;z-index:1;display:flex;flex-direction:column;min-height:100vh;max-width:1280px;margin:0 auto;padding:0 20px 60px}
 
-/* ── Header ── */
 header{padding:36px 0 24px;display:flex;align-items:center;gap:16px;border-bottom:1px solid var(--border)}
 .logo{width:44px;height:44px;border:1.5px solid var(--a1);display:grid;place-items:center;font-size:20px;flex-shrink:0;box-shadow:var(--g1);position:relative}
 .logo::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(0,229,255,.08),transparent)}
@@ -31,17 +29,14 @@ h1{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;letter-spacing:6
 .head-sub{font-size:10px;color:var(--muted);letter-spacing:3px;margin-top:3px}
 .badge{margin-left:auto;font-size:9px;color:var(--a2);border:1px solid var(--a2);padding:3px 12px;letter-spacing:2px;opacity:.85}
 
-/* ── Tabs ── */
 .tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-top:24px}
 .tab{padding:10px 24px;font-size:10px;letter-spacing:2px;cursor:pointer;border-bottom:2px solid transparent;color:var(--muted);transition:all .15s;text-transform:uppercase}
 .tab:hover{color:var(--text)}
 .tab.active{color:var(--a1);border-bottom-color:var(--a1)}
 
-/* ── Tab panels ── */
 .panel{display:none;padding-top:20px}
 .panel.active{display:block}
 
-/* ── Options bar ── */
 .opts{display:flex;flex-wrap:wrap;gap:8px;padding:16px 0;border-bottom:1px solid var(--border);margin-bottom:20px;align-items:center}
 .opt-sep{width:1px;height:24px;background:var(--border);margin:0 4px}
 .opt-lbl{font-size:9px;color:var(--muted);letter-spacing:2px;white-space:nowrap}
@@ -52,7 +47,6 @@ h1{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;letter-spacing:6
 select.sel{background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:10px;padding:5px 10px;cursor:pointer;outline:none;letter-spacing:1px}
 select.sel:focus{border-color:var(--a1)}
 
-/* ── Editor grid ── */
 .eds{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 @media(max-width:720px){.eds{grid-template-columns:1fr}}
 .ed{background:var(--card);border:1px solid var(--border);display:flex;flex-direction:column}
@@ -68,7 +62,6 @@ textarea::placeholder{color:var(--dim)}
 textarea::-webkit-scrollbar{width:5px}
 textarea::-webkit-scrollbar-thumb{background:var(--border2)}
 
-/* ── Actions ── */
 .acts{display:flex;gap:8px;margin:14px 0;flex-wrap:wrap}
 .btn{font-family:'Syne',sans-serif;font-size:10px;font-weight:700;letter-spacing:3px;padding:11px 26px;border:none;cursor:pointer;text-transform:uppercase;transition:all .15s;position:relative;overflow:hidden}
 .btn::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.07),transparent);pointer-events:none}
@@ -80,14 +73,12 @@ textarea::-webkit-scrollbar-thumb{background:var(--border2)}
 .btn-c:hover{background:rgba(255,61,110,.07)}
 .btn:disabled{opacity:.3;cursor:not-allowed;filter:none!important;box-shadow:none!important}
 
-/* ── Progress ── */
 .prog{display:none;margin:2px 0 10px}
 .prog.show{display:block}
 .prog-bg{height:2px;background:var(--border2)}
 .prog-bar{height:100%;background:linear-gradient(90deg,var(--a1),var(--a2));width:0%;transition:width .2s;box-shadow:0 0 8px rgba(0,229,255,.5)}
 .prog-lbl{font-size:9px;color:var(--muted);margin-top:5px;letter-spacing:1px}
 
-/* ── Stats ── */
 .stats{display:none;gap:20px;margin-bottom:14px;flex-wrap:wrap;border-top:1px solid var(--border);padding-top:14px}
 .stats.show{display:flex}
 .stat{display:flex;flex-direction:column;gap:2px}
@@ -95,14 +86,12 @@ textarea::-webkit-scrollbar-thumb{background:var(--border2)}
 .sv{font-size:18px;color:var(--a1);font-family:'Syne',sans-serif}
 .sv.g{color:var(--a2)}
 
-/* ── Log ── */
 .log{background:var(--bg);border:1px solid var(--border);padding:10px 14px;height:80px;overflow-y:auto;font-size:10px;color:var(--muted);line-height:1.9;display:none}
 .log.show{display:block}
 .log::-webkit-scrollbar{width:4px}
 .log::-webkit-scrollbar-thumb{background:var(--border2)}
 .log .ok{color:var(--a2)}.log .info{color:var(--a1)}.log .warn{color:var(--a4)}
 
-/* ── Webhook tab ── */
 .wh-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 @media(max-width:720px){.wh-grid{grid-template-columns:1fr}}
 .wh-card{background:var(--card);border:1px solid var(--border);padding:20px}
@@ -115,10 +104,8 @@ textarea::-webkit-scrollbar-thumb{background:var(--border2)}
 .wh-out::-webkit-scrollbar{width:5px;height:5px}
 .wh-out::-webkit-scrollbar-thumb{background:var(--border2)}
 
-/* Warning box */
 .warn-box{background:rgba(255,170,0,.05);border:1px solid rgba(255,170,0,.25);padding:12px 16px;font-size:10px;color:var(--a4);line-height:1.8;margin-bottom:16px;letter-spacing:.5px}
 
-/* ── Blink ── */
 @keyframes blink{50%{opacity:0}}
 .cur{animation:blink 1s step-end infinite}
 @keyframes glitch{0%,100%{text-shadow:var(--g1)}25%{text-shadow:-2px 0 var(--a3),2px 0 var(--a2)}75%{text-shadow:2px 0 var(--a3),-2px 0 var(--a1)}}
@@ -134,16 +121,14 @@ h1{animation:glitch 7s infinite}
     <h1>LUASHIELD</h1>
     <div class="head-sub">Roblox Lua Obfuscation Engine<span class="cur">_</span></div>
   </div>
-  <div class="badge">v4.0 — FIXED VM</div>
+  <div class="badge">v4.0 — EXECUTION FIXED</div>
 </header>
 
-<!-- Tabs -->
 <div class="tabs">
   <div class="tab active" onclick="switchTab('obf',this)">⬡ 混淆引擎</div>
   <div class="tab" onclick="switchTab('wh',this)">⚡ Webhook 保護</div>
 </div>
 
-<!-- ═══ OBFUSCATE PANEL ═══ -->
 <div class="panel active" id="tab-obf">
 
   <div class="opts">
@@ -155,16 +140,15 @@ h1{animation:glitch 7s infinite}
     </select>
     <div class="opt-sep"></div>
     <span class="opt-lbl">MODULES:</span>
-    <div class="tog on" id="t-com"  onclick="tog(this)"><span class="d"></span>STRIP COMMENTS</div>
-    <div class="tog on" id="t-str"  onclick="tog(this)"><span class="d"></span>ENCODE STRINGS</div>
-    <div class="tog on" id="t-num"  onclick="tog(this)"><span class="d"></span>ENCODE NUMBERS</div>
-    <div class="tog on" id="t-var"  onclick="tog(this)"><span class="d"></span>RENAME VARS</div>
-    <div class="tog on" id="t-jnk"  onclick="tog(this)"><span class="d"></span>JUNK STRINGS</div>
-    <div class="tog on" id="t-vm"   onclick="tog(this)"><span class="d"></span>VM WRAP</div>
+    <div class="tog on" id="t-com" onclick="tog(this)"><span class="d"></span>STRIP COMMENTS</div>
+    <div class="tog on" id="t-str" onclick="tog(this)"><span class="d"></span>ENCODE STRINGS</div>
+    <div class="tog on" id="t-num" onclick="tog(this)"><span class="d"></span>ENCODE NUMBERS</div>
+    <div class="tog on" id="t-var" onclick="tog(this)"><span class="d"></span>RENAME VARS</div>
+    <div class="tog on" id="t-jnk" onclick="tog(this)"><span class="d"></span>JUNK STRINGS</div>
+    <div class="tog on" id="t-vm" onclick="tog(this)"><span class="d"></span>VM WRAP</div>
   </div>
 
   <div class="eds">
-    <!-- Input -->
     <div class="ed">
       <div class="ed-head">
         <span class="pill i">INPUT</span>SOURCE.LUA
@@ -176,7 +160,6 @@ h1{animation:glitch 7s infinite}
       </div>
       <textarea id="src" placeholder="-- 貼上 Lua 程式碼，或拖曳上傳 .lua 檔案&#10;&#10;local function greet(name)&#10;    local msg = &quot;Hello, &quot; .. name&#10;    print(msg)&#10;    return msg&#10;end&#10;&#10;greet(&quot;World&quot;)"></textarea>
     </div>
-    <!-- Output -->
     <div class="ed">
       <div class="ed-head">
         <span class="pill o">OUTPUT</span>OBFUSCATED.LUA
@@ -189,7 +172,7 @@ h1{animation:glitch 7s infinite}
   <div class="acts">
     <button class="btn btn-a" id="btnRun" onclick="runObf()">▶ OBFUSCATE</button>
     <button class="btn btn-b" id="btnCopy" onclick="doCopy()" disabled>⧉ COPY</button>
-    <button class="btn btn-b" id="btnDl"   onclick="doDl()" disabled>↓ DOWNLOAD</button>
+    <button class="btn btn-b" id="btnDl" onclick="doDl()" disabled>↓ DOWNLOAD</button>
     <button class="btn btn-c" onclick="doClear()">✕ CLEAR</button>
   </div>
 
@@ -207,7 +190,6 @@ h1{animation:glitch 7s infinite}
   <div class="log" id="log"></div>
 </div>
 
-<!-- ═══ WEBHOOK PANEL ═══ -->
 <div class="panel" id="tab-wh">
   <div class="warn-box">
     ⚠ 此功能用於保護你的 Discord webhook 不被 exploiter 從腳本中竊取。<br>
@@ -250,14 +232,12 @@ h1{animation:glitch 7s infinite}
   </div>
 </div>
 
-</div><!-- .app -->
+</div>
 
 <script>
 'use strict';
 
-// ══════════════════════════════════════════════
-//  UI
-// ══════════════════════════════════════════════
+// UI Functions
 function switchTab(id, el) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
@@ -296,7 +276,6 @@ function updLC() {
 }
 srcEl.addEventListener('input', updLC);
 
-// File drop
 const dropEl = document.getElementById('drop');
 const fileEl = document.getElementById('fi');
 dropEl.addEventListener('click', () => fileEl.click());
@@ -328,9 +307,7 @@ function doClear() {
 }
 function fmtB(b) { return b < 1024 ? b+'B' : (b/1024).toFixed(1)+'KB'; }
 
-// ══════════════════════════════════════════════
-//  TOKENIZER
-// ══════════════════════════════════════════════
+// Tokenizer
 const TK = { WS:0, CMT:1, LSTR:2, STR:3, NUM:4, ID:5, KW:6, OP:7 };
 const LKW = new Set(['and','break','do','else','elseif','end','false','for','function',
   'goto','if','in','local','nil','not','or','repeat','return','then','true','until','while']);
@@ -348,9 +325,6 @@ function tokenize(src) {
   let i = 0, n = src.length;
   while (i < n) {
     const c = src[i], c1 = src[i+1];
-
-    // ── Long bracket (string or comment start) ──
-    // Handled below inside comment / standalone
     if (c === '[' && (c1 === '[' || c1 === '=')) {
       let eq = 0, j = i+1;
       while (j < n && src[j] === '=') { eq++; j++; }
@@ -363,10 +337,7 @@ function tokenize(src) {
         }
       }
     }
-
-    // ── Comments ──
     if (c === '-' && c1 === '-') {
-      // Long comment?
       if (src[i+2] === '[') {
         let eq = 0, j = i+3;
         while (j < n && src[j] === '=') { eq++; j++; }
@@ -379,14 +350,11 @@ function tokenize(src) {
           }
         }
       }
-      // Single-line
       let j = i+2;
       while (j < n && src[j] !== '\n') j++;
       toks.push({ t: TK.CMT, v: src.slice(i, j) });
       i = j; continue;
     }
-
-    // ── Strings ──
     if (c === '"' || c === "'") {
       const q = c; let j = i+1, raw = '';
       while (j < n) {
@@ -397,8 +365,6 @@ function tokenize(src) {
       toks.push({ t: TK.STR, v: q+raw+q, raw });
       i = j+1; continue;
     }
-
-    // ── Numbers ──
     if (/[0-9]/.test(c) || (c === '.' && /[0-9]/.test(c1||''))) {
       let j = i;
       if (src[j] === '0' && /[xX]/.test(src[j+1]||'')) {
@@ -414,8 +380,6 @@ function tokenize(src) {
       toks.push({ t: TK.NUM, v: src.slice(i, j) });
       i = j; continue;
     }
-
-    // ── Identifiers / Keywords ──
     if (/[a-zA-Z_]/.test(c)) {
       let j = i;
       while (j < n && /[a-zA-Z0-9_]/.test(src[j])) j++;
@@ -423,15 +387,11 @@ function tokenize(src) {
       toks.push({ t: LKW.has(w) ? TK.KW : TK.ID, v: w });
       i = j; continue;
     }
-
-    // ── Whitespace ──
     if (/\s/.test(c)) {
       let j = i; while (j < n && /\s/.test(src[j])) j++;
       toks.push({ t: TK.WS, v: src.slice(i, j) });
       i = j; continue;
     }
-
-    // ── Operators (2-char then 1-char) ──
     const two = src.slice(i, i+2);
     if (['..','==','~=','<=','>=','::','//','<<','>>'].includes(two)) {
       toks.push({ t: TK.OP, v: two }); i += 2;
@@ -444,23 +404,16 @@ function tokenize(src) {
 
 function toks2s(toks) { return toks.map(t => t.v).join(''); }
 
-// ══════════════════════════════════════════════
-//  PASS 1: Strip Comments
-// ══════════════════════════════════════════════
 function passComments(toks) {
   return toks.filter(t => t.t !== TK.CMT);
 }
 
-// ══════════════════════════════════════════════
-//  PASS 2: Encode Strings → string.char(...)
-// ══════════════════════════════════════════════
 function luaUnesc(raw) {
-  // Returns array of byte values
   const out = [];
   let i = 0;
   while (i < raw.length) {
     if (raw[i] !== '\\') { out.push(raw.charCodeAt(i++)); continue; }
-    i++; // skip '\'
+    i++;
     const e = raw[i] || '';
     if      (e==='a') { out.push(7);  i++; }
     else if (e==='b') { out.push(8);  i++; }
@@ -491,9 +444,7 @@ function luaUnesc(raw) {
 function passStrings(toks) {
   let cnt = 0;
   const res = [];
-  // Track previous non-WS token to skip require("...") 
   let prevID = null;
-
   for (let i = 0; i < toks.length; i++) {
     const tok = toks[i];
     if (tok.t !== TK.STR) {
@@ -502,15 +453,9 @@ function passStrings(toks) {
       continue;
     }
     const raw = tok.raw || '';
-    // Skip empty
-    if (!raw) { res.push(tok); continue; }
-    // Skip require("...") arguments
-    if (prevID && prevID.t === TK.ID && prevID.v === 'require') {
+    if (!raw || (prevID && prevID.t === TK.ID && prevID.v === 'require') || raw.length > 400) {
       res.push(tok); continue;
     }
-    // Skip very long strings (likely data / encoded payloads)
-    if (raw.length > 400) { res.push(tok); continue; }
-    // Try to encode
     try {
       const bytes = luaUnesc(raw);
       if (bytes.length === 0 || bytes.some(b => isNaN(b) || b < 0 || b > 255)) {
@@ -524,9 +469,6 @@ function passStrings(toks) {
   return [res, cnt];
 }
 
-// ══════════════════════════════════════════════
-//  PASS 3: Rename Local Variables
-// ══════════════════════════════════════════════
 const _NC = 'IlIlIllIlIlIllIlIllIlI';
 let _ns = 0x7F3A1;
 function mkN() {
@@ -540,13 +482,11 @@ function mkN() {
 
 function passRename(toks) {
   const locals = new Set();
-  // Collect local declarations
   for (let i = 0; i < toks.length; i++) {
     const t = toks[i];
     if (t.t !== TK.KW || t.v !== 'local') continue;
     let j = i+1;
     while (j < toks.length && toks[j].t === TK.WS) j++;
-    // local function X
     if (j < toks.length && toks[j].t === TK.KW && toks[j].v === 'function') {
       j++;
       while (j < toks.length && toks[j].t === TK.WS) j++;
@@ -554,7 +494,6 @@ function passRename(toks) {
         locals.add(toks[j].v);
       continue;
     }
-    // local a, b, c
     while (j < toks.length) {
       if (toks[j].t === TK.WS) { j++; continue; }
       if (toks[j].t === TK.ID && !LBUILTIN.has(toks[j].v)) {
@@ -565,7 +504,6 @@ function passRename(toks) {
       } else break;
     }
   }
-  // for i,v
   for (let i = 0; i < toks.length; i++) {
     const t = toks[i];
     if (t.t !== TK.KW || t.v !== 'for') continue;
@@ -580,12 +518,10 @@ function passRename(toks) {
       } else break;
     }
   }
-  // Function parameters
   for (let i = 0; i < toks.length; i++) {
     const t = toks[i];
     if (t.t !== TK.KW || t.v !== 'function') continue;
     let j = i+1;
-    // Skip function name(s)
     while (j < toks.length && toks[j].t !== TK.OP) j++;
     if (j < toks.length && toks[j].v === '(') {
       j++;
@@ -600,20 +536,12 @@ function passRename(toks) {
       }
     }
   }
-
-  // Build map
   const map = new Map();
-  for (const n of locals) {
-    const nn = mkN();
-    map.set(n, nn);
-  }
-
-  // Apply
+  for (const n of locals) { map.set(n, mkN()); }
   const res = [];
   for (let i = 0; i < toks.length; i++) {
     const t = toks[i];
     if (t.t === TK.ID && map.has(t.v)) {
-      // Skip if preceded by '.' (field access like obj.method)
       let p = i-1;
       while (p >= 0 && toks[p].t === TK.WS) p--;
       if (p >= 0 && toks[p].t === TK.OP && toks[p].v === '.') {
@@ -625,31 +553,22 @@ function passRename(toks) {
   return [res, map.size];
 }
 
-// ══════════════════════════════════════════════
-//  PASS 4: Encode Numbers
-// ══════════════════════════════════════════════
 function passNumbers(toks) {
   return toks.map(t => {
     if (t.t !== TK.NUM) return t;
     const v = t.v;
-    // Skip hex, float, scientific
-    if (v.includes('x') || v.includes('X') || v.includes('.') ||
-        v.includes('e') || v.includes('E')) return t;
+    if (v.includes('x') || v.includes('X') || v.includes('.') || v.includes('e') || v.includes('E')) return t;
     const n = parseInt(v);
     if (isNaN(n) || n < 0 || n > 99999 || Math.random() > 0.6) return t;
-    const a = (Math.random()*77|0)+3;
     const enc = [
-      `(${n+a}-${a})`,
+      `(${n+3}-3)`,
       `(${Math.floor(n/3)}*3+${n%3})`,
-      `math.floor(${n+(Math.random()*0.9)})`,
+      `math.floor(${n+0.1})`,
     ];
     return { t: TK.OP, v: enc[Math.random()*enc.length|0] };
   });
 }
 
-// ══════════════════════════════════════════════
-//  PASS 5: Inject Junk Strings
-// ══════════════════════════════════════════════
 function rh(n) { let s=''; for(let i=0;i<n;i++) s+=(Math.random()*16|0).toString(16).toUpperCase(); return s; }
 
 function passJunk(src, density) {
@@ -658,8 +577,7 @@ function passJunk(src, density) {
   for (const line of lines) {
     out.push(line);
     const tr = line.trim();
-    if (!tr || tr.startsWith('--') || tr.startsWith('local _') ) continue;
-    // Only after "complete-looking" lines
+    if (!tr || tr.startsWith('--') || tr.startsWith('local _')) continue;
     if (!/[;)\]}]|end$|return/.test(tr) && tr.length < 5) continue;
     if (Math.random() > density) continue;
     const junk = [
@@ -675,27 +593,19 @@ function passJunk(src, density) {
   return [out.join('\n'), cnt];
 }
 
-// ══════════════════════════════════════════════
-//  CUSTOM VM WRAPPER
-//  Encodes source bytes with 3-layer rolling XOR
-//  Decoder is stack-VM style loop in Luau
-// ══════════════════════════════════════════════
+// 修正後的 VM 包裝器 - 立即執行
 function passVM(src) {
-  // 3 key parameters
   const K1 = (Math.random()*127|0)+10;
   const K2 = (Math.random()*63|0)+3;
   const K3 = (Math.random()*31|0)+2;
 
-  // Encode
   const enc = [];
   for (let i = 0; i < src.length; i++) {
     const b = src.charCodeAt(i) & 0xFF;
-    // Triple-layer key
     const k = ((K1 + i*K2) ^ (i % 256) ^ K3) & 0xFF;
     enc.push(b ^ k);
   }
 
-  // Split into chunks of varying size (harder to pattern-match)
   const chunks = [];
   let ci = 0;
   while (ci < enc.length) {
@@ -704,38 +614,21 @@ function passVM(src) {
     ci += sz;
   }
 
-  // Random var names
-  const V = Array.from({length:14}, mkN);
+  const V = Array.from({length:14}, () => mkN());
   const [vC,vD,vI,vCi,vBi,vB,vK,vF,vK1,vK2,vK3,vT,vS,vE] = V;
   const sig = rh(16);
-
   const chStr = chunks.map(c => `{${c.join(',')}}`).join(',');
 
-  return `--[[LuaShield/VM:${sig}]]
-local ${vK1},${vK2},${vK3}=${K1},${K2},${K3}
-local ${vC}={${chStr}}
-local ${vD},${vI}={},0
-for ${vCi}=1,#${vC} do
-for ${vBi}=1,#${vC}[${vCi}] do
-${vI}=${vI}+1
-${vB}=${vC}[${vCi}][${vBi}]
-local ${vK}=bit32.bxor(bit32.bxor(${vK1}+(${vI}-1)*${vK2},(${vI}-1)%256),${vK3})%256
-${vD}[${vI}]=string.char(bit32.bxor(${vB},${vK}))
-end
-end
-local ${vF},${vE}=load(table.concat(${vD}))
-if not ${vF} then error(tostring(${vE})) end
-return ${vF}()`;
+  // 關鍵修正：包裝成立即執行函數
+  return `--[[LuaShield/VM:${sig} Executor]]\n(function()\nlocal ${vK1},${vK2},${vK3}=${K1},${K2},${K3}\nlocal ${vC}={${chStr}}\nlocal ${vD},${vI}={},0\nfor ${vCi}=1,#${vC} do\n  for ${vBi}=1,#${vC}[${vCi}] do\n    ${vI}=${vI}+1\n    ${vB}=${vC}[${vCi}][${vBi}]\n    local ${vK}=bit32.bxor(bit32.bxor(${vK1}+(${vI}-1)*${vK2},(${vI}-1)%256),${vK3})%256\n    ${vD}[${vI}]=string.char(bit32.bxor(${vB},${vK}))\n  end\nend\nlocal ${vF},${vE}=load(table.concat(${vD}))\nif not ${vF} then error(tostring(${vE})) end\n${vF}()\nend)()`;
 }
 
-// ══════════════════════════════════════════════
-//  MAIN RUNNER
-// ══════════════════════════════════════════════
 function runObf() {
   const src = srcEl.value.trim();
   if (!src) { lg('請先輸入程式碼', 'warn'); return; }
 
-  logEl.innerHTML = ''; logEl.classList.add('show');
+  logEl.innerHTML = '';
+  logEl.classList.add('show');
   document.getElementById('stats').classList.remove('show');
   document.getElementById('btnCopy').disabled = true;
   document.getElementById('btnDl').disabled   = true;
@@ -783,8 +676,7 @@ function runObf() {
       }
 
       if (doVar && pass > 1) {
-        setP(50 + pass*8, `[${pass}] Re-tokenizing for next pass...`);
-        // Re-tokenize the output for subsequent passes
+        setP(50 + pass*8, `[${pass}] Re-tokenizing...`);
         const mid = toks2s(toks);
         toks = tokenize(mid);
       }
@@ -807,9 +699,9 @@ function runObf() {
     }
 
     if (doVM) {
-      setP(90, 'Applying VM wrap...');
+      setP(90, 'Applying VM wrap (auto-execute)...');
       str = passVM(str);
-      lg(`✓ VM wrap applied (3-layer XOR)`, 'ok');
+      lg(`✓ VM wrap applied - code will execute automatically`, 'ok');
     }
 
     setP(100, '完成！');
@@ -837,11 +729,7 @@ function runObf() {
   document.getElementById('btnRun').disabled = false;
 }
 
-// ══════════════════════════════════════════════
-//  FAKE WEBHOOK GENERATOR
-// ══════════════════════════════════════════════
-const _WH_IDS = Array.from({length:60}, () =>
-  String(Math.floor(Math.random()*9e17+1e17)));
+// Webhook Generator
 const _WH_TOKS = Array.from({length:60}, () => {
   const chars='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-';
   return Array.from({length:68}, () => chars[Math.random()*chars.length|0]).join('');
@@ -851,7 +739,6 @@ function generateFakeWH(realUrl, count, keyStrength) {
   if (!realUrl || !realUrl.startsWith('http')) return '-- 請輸入有效的 webhook URL';
   count = parseInt(count) || 40;
 
-  // Build XOR key stream based on strength
   const K1 = (Math.random()*200|0)+10;
   const K2 = keyStrength === 'single' ? 0 : (Math.random()*50|0)+5;
   const K3 = keyStrength === 'triple' ? (Math.random()*20|0)+2 : 0;
@@ -865,9 +752,8 @@ function generateFakeWH(realUrl, count, keyStrength) {
     enc.push(b ^ k);
   }
 
-  // Generate fakes - regenerate every time so they're unique
-  const fakes = Array.from({length:count}, (_,i) => {
-    const id  = String(Math.floor(Math.random()*9e17+1e17));
+  const fakes = Array.from({length:count}, () => {
+    const id = String(Math.floor(Math.random()*9e17+1e17));
     const tok = Array.from({length:68}, () => {
       const c='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-';
       return c[Math.random()*c.length|0];
@@ -875,7 +761,7 @@ function generateFakeWH(realUrl, count, keyStrength) {
     return `"https://discord.com/api/webhooks/${id}/${tok}"`;
   });
 
-  const [vE,vK1,vK2,vK3,vF,vG,vT,vI,vB,vK,vR] = Array.from({length:11},mkN);
+  const [vE,vK1,vK2,vK3,vF,vG,vT,vI,vB,vK,vR] = Array.from({length:11}, () => mkN());
   const sig = rh(14);
   const ksComment = keyStrength === 'triple' ? '3-layer' : keyStrength === 'double' ? '2-layer' : '1-layer';
 
@@ -884,45 +770,21 @@ function generateFakeWH(realUrl, count, keyStrength) {
   if (K3) decodeBody += `\n  ${vK}=bit32.bxor(${vK},${K3})`;
   decodeBody += `\n  ${vT}[${vI}]=string.char(bit32.bxor(${vB},${vK}))`;
 
-  return `--[[
-  LuaShield WebhookGuard | ${sig}
-  ${ksComment} XOR | ${count} decoy webhooks
-  Real URL is XOR-encoded — NOT visible in plaintext
-]]
-
--- ⚠ Decoy webhooks (${count} fake targets for static analyzers)
-local ${vF} = {
-  ${fakes.join(',\n  ')}
-}
-
--- Real webhook (${ksComment} XOR encoded)
-local ${vK1},${vK2 ? `${vK2},` : ''}${vK3 ? `${vK3},` : ''}${vE} = ${K1},${K2 || ''}${K2 ? ',' : ''}${K3 || ''}${K3 ? ',' : ''}{${enc.join(',')}}
-local function ${vG}()
-  local ${vT},${vI} = {},0
-  for _,${vB} in ipairs(${vE}) do
-    ${vI}=${vI}+1
-    ${decodeBody}
-  end
-  return table.concat(${vT})
-end
-
--- Usage:
--- local webhookUrl = ${vG}()
--- game:GetService("HttpService"):PostAsync(webhookUrl, payload)
-`;
+  return `--[[ LuaShield WebhookGuard | ${sig} ${ksComment} XOR | ${count} decoy webhooks ]]\n\n-- ${count} decoy webhooks\nlocal ${vF}={\n  ${fakes.join(',\n  ')}\n}\n\n-- Real URL (${ksComment} XOR encoded)\nlocal ${vK1},${vK2 ? `${vK2},` : ''}${vK3 ? `${vK3},` : ''}${vE}=${K1},${K2||0},${K3||0},{${enc.join(',')}}\n\nlocal function ${vG}()\n  local ${vT},${vI}={},0\n  for _,${vB} in ipairs(${vE}) do\n    ${vI}=${vI}+1\n    ${decodeBody}\n  end\n  return table.concat(${vT})\nend\n\n-- Usage: local webhook = ${vG}()\n-- HttpService:PostAsync(webhook, payload)`;
 }
 
 function whGenerate() {
-  const url   = document.getElementById('wh-real').value.trim();
+  const url = document.getElementById('wh-real').value.trim();
   const count = document.getElementById('wh-count').value;
-  const ks    = document.getElementById('wh-ks').value;
-  const code  = generateFakeWH(url, count, ks);
+  const ks = document.getElementById('wh-ks').value;
+  const code = generateFakeWH(url, count, ks);
   document.getElementById('wh-out').textContent = code;
+  lg('Webhook 保護代碼已生成', 'ok');
 }
-function whPreview() { /* debounced in real use */ }
+function whPreview() {}
 function whCopy() {
   const t = document.getElementById('wh-out').textContent;
-  navigator.clipboard.writeText(t).then(() => alert('已複製！'));
+  navigator.clipboard.writeText(t).then(() => lg('已複製 webhook 代碼', 'ok'));
 }
 </script>
 </body>
