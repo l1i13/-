@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LuaShield v13 — Roblox Lua Obfuscator</title>
+<title>LuaShield v14 — Roblox Lua Obfuscator</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&family=Syne:wght@700;800&display=swap');
 :root{
@@ -107,7 +107,7 @@ h1{animation:glitch 7s infinite}
     <h1>LUASHIELD</h1>
     <div class="head-sub">Roblox Lua Obfuscation Engine<span class="cur">_</span></div>
   </div>
-  <div class="badge">v13.0 — NTT ENGINE</div>
+  <div class="badge">v14.0 — NTT ENGINE</div>
 </header>
 
 <div class="tabs">
@@ -886,7 +886,7 @@ function passVM(src) {
     `end;`;
 
   const checks =
-    // ── Layer 1: Basic sanity ──
+    // ── Layer 1: Basic sanity (Roblox-verified safe) ──
     `do local ${vT1}=math.abs(-7);if ${vT1}~=7 then ${vTrap}()end end;` +
     `do local ${vT1}=type("x");if ${vT1}~="string" then ${vTrap}()end end;` +
     `do local ${vT1}=select("#",1,2,3,4,5);if ${vT1}~=5 then ${vTrap}()end end;` +
@@ -894,50 +894,44 @@ function passVM(src) {
     `do local ${vT1}=string.char(66);if ${vT1}~="B" then ${vTrap}()end end;` +
     `do local ${vT1},${vT2}=pcall(math.abs,-9);if not ${vT1} or ${vT2}~=9 then ${vTrap}()end end;` +
 
-    // ── Layer 2: String metatable binding (novel) ──
-    // Native Lua: ("x").byte == string.byte via __index metatable.
-    // Env-loggers replace string.byte but forget to patch the metatable.
-    `do local ${vT1}=("x").byte;local ${vT2}=string.byte;` +
-    `if not rawequal(${vT1},${vT2}) then ${vTrap}()end end;` +
-
-    // ── Layer 3: debug.getinfo C-function check ──
-    // Native functions: what="C". Lua wrappers: what="Lua".
+    // ── Layer 2: debug.getinfo C-function check ──
+    // Native C functions report what="C". Lua wrappers (env loggers) report what="Lua".
+    // Wrapped in pcall so missing debug library doesn't crash.
     `do if debug and debug.getinfo then ` +
     `local _fns={string.byte,string.char,string.sub,string.gsub,` +
     `math.floor,math.abs,pcall,rawequal,rawget,select,type};` +
     `for _,${vT1} in next,_fns do ` +
-    `local ${vT2}=debug.getinfo(${vT1},"S");` +
-    `if ${vT2} and ${vT2}.what~="C" then ${vTrap}()end ` +
+    `local _ok,${vT2}=pcall(debug.getinfo,${vT1},"S");` +
+    `if _ok and ${vT2} and ${vT2}.what~="C" then ${vTrap}()end ` +
     `end end end;` +
 
-    // ── Layer 4: Upvalue inspection (novel) ──
-    // Native C functions have 0 Lua upvalues.
-    // Env-logger wrappers need upvalues to hold the original function.
-    `do if debug and debug.getupvalue then ` +
-    `local _fns={string.byte,string.char,string.gsub,pcall,math.floor};` +
-    `for _,${vT1} in next,_fns do ` +
-    `local ${vT2}=debug.getupvalue(${vT1},1);` +
-    `if ${vT2}~=nil then ${vTrap}()end ` +
-    `end end end;` +
-
-    // ── Layer 5: Coroutine integrity (novel) ──
-    `do local _co=coroutine.create(function()return 0xBEEF end);` +
+    // ── Layer 3: Coroutine integrity (novel) ──
+    // Env-loggers that hook coroutine.resume break exact return values.
+    `do local _ok,_co=pcall(coroutine.create,function()return 0xBEEF end);` +
+    `if _ok and _co then ` +
     `local ${vT1},${vT2}=coroutine.resume(_co);` +
     `if not ${vT1} or ${vT2}~=48879 then ${vTrap}()end;` +
-    `if coroutine.status(_co)~="dead" then ${vTrap}()end end;` +
+    `if coroutine.status(_co)~="dead" then ${vTrap}()end ` +
+    `end end;` +
 
-    // ── Layer 6: rawlen vs # consistency (novel) ──
-    `do local ${vT1}={1,2,3,4,5,6,7};` +
+    // ── Layer 4: rawlen vs # table consistency (novel) ──
+    // Hooks that replace # operator break rawlen consistency.
+    `do local ${vT1}={10,20,30,40,50,60,70};` +
     `if rawlen(${vT1})~=7 or rawlen(${vT1})~=#${vT1} then ${vTrap}()end end;` +
 
-    // ── Layer 7: String pattern engine integrity ──
-    `do local ${vT1},${vT2}=string.gsub("aaa","a","b");` +
-    `if ${vT1}~="bbb" or ${vT2}~=3 then ${vTrap}()end end;` +
+    // ── Layer 5: String pattern engine integrity ──
+    // Hooked gsub might return wrong replacement count or string.
+    `do local ${vT1},${vT2}=string.gsub("aaabbb","a","x");` +
+    `if ${vT1}~="xxxbbb" or ${vT2}~=3 then ${vTrap}()end end;` +
 
-    // ── Layer 8: Math precision fingerprint (novel) ──
-    // IEEE-754 gives exact values; reimplemented math libs differ.
-    `do if math.floor(math.pi*1e6)~=3141592 then ${vTrap}()end end;` +
-    `do if math.floor(math.exp(1)*1e6)~=2718281 then ${vTrap}()end end;`;
+    // ── Layer 6: rawequal self-identity (novel) ──
+    // Env-loggers that proxy tables break object identity.
+    `do local ${vT1}={};if not rawequal(${vT1},${vT1}) then ${vTrap}()end end;` +
+
+    // ── Layer 7: pcall error propagation ──
+    // Hooked pcall might not correctly return error objects.
+    `do local ${vT1},${vT2}=pcall(error,"__chk__");` +
+    `if ${vT1} or not tostring(${vT2}):find("__chk__") then ${vTrap}()end end;`;
 
   // Base-85 decoder
   const decoder =
