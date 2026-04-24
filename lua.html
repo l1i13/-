@@ -780,86 +780,92 @@ function b85Enc(src) {
 }
 
 // ══════════════════════════════════════════════
-//  PASS: VM WRAPPER  (v5.3 — rolling XOR, no string.pack)
+//  PASS: VM WRAPPER  (v5.4 — Base-85, symbol-rich)
 //
-//  Output: return(function()...end)()  single line
-//  Encoding: rolling XOR  enc[j] = byte[j] XOR k
-//                          k = (k*M + (j+3)) % 256
-//  No string.pack, no long strings — works everywhere
+//  Output: return(function()...end)()
+//  Payload: base-85 encoded (chars 33–117, lots of symbols)
+//  Decoder: string.pack + string.gsub (same as reference)
+//  UTF-8 aware: Chinese/CJK characters handled correctly
 // ══════════════════════════════════════════════
 function passVM(src) {
-  const K = (Math.random()*200|0) + 10;
-  const M = ROLL_MULS[Math.random()*ROLL_MULS.length|0];
+  const SIG  = rh(4).toUpperCase();
+  const skip = SIG.length + 1; // = 5 (Lua string.sub is 1-indexed)
 
-  // Convert source to UTF-8 bytes (critical for Chinese/non-ASCII in source code)
+  // ── Base-85 encode (UTF-8 bytes) ─────────────
   const srcBytes = strToUTF8(src);
+  const padded   = [...srcBytes];
+  while (padded.length % 4 !== 0) padded.push(32); // space pad
 
-  // Rolling XOR encode
-  const enc = [];
-  let k = K;
-  for (let i = 0; i < srcBytes.length; i++) {
-    enc.push((srcBytes[i] ^ k) & 0xFF);
-    k = (k * M + (i + 3)) % 256;
+  let b85 = '';
+  for (let i = 0; i < padded.length; i += 4) {
+    const L = padded[i] + padded[i+1]*256 + padded[i+2]*65536 + padded[i+3]*16777216;
+    if (L === 0) { b85 += 'z'; continue; }
+    let n = L;
+    const c1 = 33 + Math.floor(n/52200625); n %= 52200625;
+    const c2 = 33 + Math.floor(n/614125);   n %= 614125;
+    const c3 = 33 + Math.floor(n/7225);     n %= 7225;
+    const c4 = 33 + Math.floor(n/85);       n %= 85;
+    const c5 = 33 + n;
+    b85 += String.fromCharCode(c1, c2, c3, c4, c5);
   }
 
-  // Split into chunks of 80 for readable table literals
-  const CHUNK = 80;
-  const chunks = [];
-  for (let ci = 0; ci < enc.length; ci += CHUNK)
-    chunks.push(enc.slice(ci, ci + CHUNK));
+  const payload = SIG + b85;
 
-  // Generate random variable names
-  const [vK,vM,vA,vCh,vBy,vD,vI,vBx,vF,vE,vT1,vT2] = Array.from({length:12}, mkN);
-  const sig = rh(12).toUpperCase();
+  // ── Safe long-string bracket ──────────────────
+  // base-85 uses chars 33-117 which include ']'=93 and '='=61.
+  // Find smallest N where ]=N=] doesn't appear in payload.
+  let bracketN = 2;
+  while (payload.includes(']' + '='.repeat(bracketN) + ']')) bracketN++;
+  const LS = '[' + '='.repeat(bracketN) + '[';
+  const LE = ']' + '='.repeat(bracketN) + ']';
 
-  const chunkLit = chunks.map(c => `{${c.join(',')}}`).join(',');
+  // ── Variable names ────────────────────────────
+  const [vA,vP,vy,ve,vSk,vC,vF,vV,vZ,vGs,vSb,vLd,vDec,vH,vStr,vFn,vEr,vT1] =
+    Array.from({length:18}, mkN);
+  const sig = rh(10).toUpperCase();
 
-  // Pure-math XOR fallback (for envs without bit32)
-  const bxFallback =
-    `function(a,b)` +
-    `local r,m=0,128;` +
-    `while m>=1 do ` +
-    `local x,y=a>=m and 1 or 0,b>=m and 1 or 0;` +
-    `if x~=y then r=r+m end;` +
-    `if x==1 then a=a-m end;` +
-    `if y==1 then b=b-m end;` +
-    `m=math.floor(m/2) ` +
-    `end;` +
-    `return r ` +
-    `end`;
-
-  // Anti-tamper: checks that don't use string.pack
   const N1 = (Math.random()*200|0)+53;
   const N2 = (Math.random()*300|0)+97;
-  const at1 = `do local ${vT1}=math.abs(-1);if ${vT1}~=1 then ${vK}=${vK}+${N1} end end;`;
-  const at2 = `do local ${vT1}=type("x");if ${vT1}~="string" then ${vK}=${vK}+${N2} end end;`;
 
-  // Decode loop
+  // ── Anti-tamper (reliable checks only) ───────
+  const at =
+    `do local ${vT1}=math.abs(-1);if ${vT1}~=1 then ${vSk}=${vSk}+${N1} end end;` +
+    `do local ${vT1}=type("x");if ${vT1}~="string" then ${vSk}=${vSk}+${N2} end end;`;
+
+  // ── Base-85 decoder ───────────────────────────
+  // Strips 4-char SIG → expands 'z' → decodes 5-char groups via
+  // a lazy __index table that memoises each decoded 4-byte chunk.
   const decoder =
-    `local ${vA}={${chunkLit}};` +
-    `local ${vD},${vI}={},0;` +
-    `local ${vBx}=bit32 and bit32.bxor or ${bxFallback};` +
-    `for _,${vCh} in ipairs(${vA}) do ` +
-    `for _,${vBy} in ipairs(${vCh}) do ` +
-    `${vI}=${vI}+1;` +
-    `${vD}[${vI}]=string.char(${vBx}(${vBy},${vK}%256));` +
-    `${vK}=(${vK}*${vM}+(${vI}+2))%256 ` +
-    `end end;`;
+    `local ${vH}=function(b)` +
+    `b=${vSb}(b,${vSk});` +
+    `b=${vGs}(b,"z","!!!!!");` +
+    `return ${vGs}(b,".....",${vF}({},{__index=function(${vDec},_)` +
+    `local p,b,d,t,i=${vy}(_,1,5);` +
+    `local L=(i-33)+(t-33)*85+(d-33)*7225+(b-33)*614125+(p-33)*52200625;` +
+    `d=${vZ}("<I4",L);${vDec}[_]=d;return d;` +
+    `end})) end;`;
 
-  // Execute
-  const executor =
-    `local ${vF},${vE}=(loadstring or load)(table.concat(${vD}));` +
-    `if not ${vF} then error(tostring(${vE})) end;` +
-    `local _ok,_er=pcall(${vF});` +
+  // ── Load & execute ────────────────────────────
+  const execute =
+    `local ${vStr}=${vH}(${LS}${payload}${LE});` +
+    `local ${vFn},${vEr}=(${vLd})(${vStr});` +
+    `if not ${vFn} then error(tostring(${vEr})) end;` +
+    `local _ok,_er=pcall(${vFn});` +
     `if not _ok then error(tostring(_er)) end;`;
 
+  // ── Assemble single-line output ───────────────
   return (
     `--[[${sig}]]` +
     `return(function()` +
-    `local ${vK},${vM}=${K},${M};` +
-    at1 + at2 +
+    `local ${vA},${vP},${vy},${ve},${vSk},${vC},${vF},${vV}=` +
+    `string.char,pcall,string.byte,unpack or table.unpack,${skip},{},setmetatable,assert;` +
+    `for _=0,255 do ${vC}[_]=${vA}(_) end;` +
+    `local _,${vLd}={[0]=1,2,4,8,16,32,64,128},loadstring or load;` +
+    `${vC}=tostring;` +
+    `local ${vZ},${vGs},${vSb}=string.pack,string.gsub,string.sub;` +
+    at +
     decoder +
-    executor +
+    execute +
     `end)()`
   );
 }
