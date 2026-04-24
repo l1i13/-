@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LuaShield v8 — Roblox Lua Obfuscator</title>
+<title>LuaShield v9 — Roblox Lua Obfuscator</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&family=Syne:wght@700;800&display=swap');
 :root{
@@ -107,7 +107,7 @@ h1{animation:glitch 7s infinite}
     <h1>LUASHIELD</h1>
     <div class="head-sub">Roblox Lua Obfuscation Engine<span class="cur">_</span></div>
   </div>
-  <div class="badge">v8.0 — NTT ENGINE</div>
+  <div class="badge">v9.0 — NTT ENGINE</div>
 </header>
 
 <div class="tabs">
@@ -656,12 +656,31 @@ function isSafeInject(line) {
 // ══════════════════════════════════════════════
 //  PASS: Inject Junk
 // ══════════════════════════════════════════════
+// ── Safe injection check with look-back ──────────
+// Detects continuation lines (multi-line return, binary ops, etc.)
+// by checking if any recent previous line ended with a continuation operator.
+function isSafeInjectAt(lines, idx) {
+  if (!isSafeInject(lines[idx])) return false;
+  // Look back up to 3 non-blank lines for continuation operators
+  for (let lb = 1; lb <= 3 && idx - lb >= 0; lb++) {
+    const prev = lines[idx - lb].trim();
+    if (!prev) break; // blank line = new statement context
+    // Previous line ends with continuation operator → current line is a continuation
+    if (/\b(or|and)\s*$/.test(prev) || /\.\.$/.test(prev)) return false;
+    if (/[+\-*\/]\s*$/.test(prev)) return false;
+    // Previous line is itself a safe complete statement → stop looking back
+    if (isSafeInject(lines[idx - lb])) break;
+  }
+  return true;
+}
+
 function passJunk(src, density) {
   const lines = src.split('\n');
   const out = []; let cnt = 0;
-  for (const line of lines) {
+  for (let idx = 0; idx < lines.length; idx++) {
+    const line = lines[idx];
     out.push(line);
-    if (!isSafeInject(line)) continue;
+    if (!isSafeInjectAt(lines, idx)) continue;
     if (Math.random() > density) continue;
     const junk = [
       () => `local _${rh(3)}=string.char(${Array.from({length:6+Math.random()*6|0},()=>Math.random()*254|0+1).join(',')})`,
@@ -695,9 +714,9 @@ function passOpaque(src) {
   ];
   const lines = src.split('\n');
   const out = [];
-  for (const line of lines) {
-    out.push(line);
-    if (!isSafeInject(line)) continue;
+  for (let idx = 0; idx < lines.length; idx++) {
+    out.push(lines[idx]);
+    if (!isSafeInjectAt(lines, idx)) continue;
     if (Math.random() > 0.72) continue;
     out.push(ops[Math.random()*ops.length|0]());
   }
