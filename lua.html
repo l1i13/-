@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LuaShield v17 — Roblox Lua Obfuscator</title>
+<title>LuaShield v18 — Roblox Lua Obfuscator</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&family=Syne:wght@700;800&display=swap');
 :root{
@@ -107,7 +107,7 @@ h1{animation:glitch 7s infinite}
     <h1>LUASHIELD</h1>
     <div class="head-sub">Roblox Lua Obfuscation Engine<span class="cur">_</span></div>
   </div>
-  <div class="badge">v17.0 — NTT ENGINE</div>
+  <div class="badge">v18.0 — NTT ENGINE</div>
 </header>
 
 <div class="tabs">
@@ -515,7 +515,7 @@ function passStrings(toks, dsV) {
       let pp = i - 1; while (pp >= 0 && toks[pp].t === TK.WS) pp--;
       let nn = i + 1; while (nn < toks.length && toks[nn].t === TK.WS) nn++;
       const prevOp = pp >= 0 ? toks[pp] : null;
-      const nextOp = nn < toks.length ? toks[nn] : null;
+      const nextOp = nx < toks.length ? toks[nx] : null;
       const inCmp = (prevOp?.t === TK.OP && (prevOp.v === '==' || prevOp.v === '~=')) ||
                     (nextOp?.t === TK.OP && (nextOp.v === '==' || nextOp.v === '~='));
       if (inCmp) { res.push(tok); prevID = tok; continue; }
@@ -874,7 +874,7 @@ function passVM(src) {
   const LE = ']' + '='.repeat(bracketN) + ']';
 
   const [vA,vP,vy,ve,vSk,vC,vF,vV,vZ,vGs,vSb,vLd,vDec,vH,vStr,vFn,vEr,
-         vT1,vT2,vT3] = Array.from({length:19}, mkSN); // safe names
+         vT1,vT2,vT3] = Array.from({length:20}, mkSN); // safe names
   const sig = rh(10).toUpperCase();
 
   // ── Anti-tamper: corrupt skip offset on hook detection ──
