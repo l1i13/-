@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LuaShield v14 — Roblox Lua Obfuscator</title>
+<title>LuaShield v15 — Roblox Lua Obfuscator</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&family=Syne:wght@700;800&display=swap');
 :root{
@@ -107,7 +107,7 @@ h1{animation:glitch 7s infinite}
     <h1>LUASHIELD</h1>
     <div class="head-sub">Roblox Lua Obfuscation Engine<span class="cur">_</span></div>
   </div>
-  <div class="badge">v14.0 — NTT ENGINE</div>
+  <div class="badge">v15.0 — NTT ENGINE</div>
 </header>
 
 <div class="tabs">
@@ -886,7 +886,7 @@ function passVM(src) {
     `end;`;
 
   const checks =
-    // ── Layer 1: Basic sanity (Roblox-verified safe) ──
+    // ── Layer 1: Function behavior sanity (all definitely safe in Roblox) ──
     `do local ${vT1}=math.abs(-7);if ${vT1}~=7 then ${vTrap}()end end;` +
     `do local ${vT1}=type("x");if ${vT1}~="string" then ${vTrap}()end end;` +
     `do local ${vT1}=select("#",1,2,3,4,5);if ${vT1}~=5 then ${vTrap}()end end;` +
@@ -894,44 +894,34 @@ function passVM(src) {
     `do local ${vT1}=string.char(66);if ${vT1}~="B" then ${vTrap}()end end;` +
     `do local ${vT1},${vT2}=pcall(math.abs,-9);if not ${vT1} or ${vT2}~=9 then ${vTrap}()end end;` +
 
-    // ── Layer 2: debug.getinfo C-function check ──
-    // Native C functions report what="C". Lua wrappers (env loggers) report what="Lua".
-    // Wrapped in pcall so missing debug library doesn't crash.
-    `do if debug and debug.getinfo then ` +
-    `local _fns={string.byte,string.char,string.sub,string.gsub,` +
-    `math.floor,math.abs,pcall,rawequal,rawget,select,type};` +
-    `for _,${vT1} in next,_fns do ` +
-    `local _ok,${vT2}=pcall(debug.getinfo,${vT1},"S");` +
-    `if _ok and ${vT2} and ${vT2}.what~="C" then ${vTrap}()end ` +
-    `end end end;` +
-
-    // ── Layer 3: Coroutine integrity (novel) ──
-    // Env-loggers that hook coroutine.resume break exact return values.
-    `do local _ok,_co=pcall(coroutine.create,function()return 0xBEEF end);` +
+    // ── Layer 2: Coroutine integrity ──
+    // Env-loggers hooking coroutine.resume break exact return values.
+    // Fully wrapped in pcall — never false-triggers if coroutine behaves differently.
+    `do local _ok,_co=pcall(coroutine.create,function()return 48879 end);` +
     `if _ok and _co then ` +
-    `local ${vT1},${vT2}=coroutine.resume(_co);` +
-    `if not ${vT1} or ${vT2}~=48879 then ${vTrap}()end;` +
-    `if coroutine.status(_co)~="dead" then ${vTrap}()end ` +
+    `local ${vT1},${vT2}=pcall(coroutine.resume,_co);` +
+    `if ${vT1} and (not ${vT2} or ${vT2}~=48879) then ${vTrap}()end ` +
     `end end;` +
 
-    // ── Layer 4: rawlen vs # table consistency (novel) ──
-    // Hooks that replace # operator break rawlen consistency.
-    `do local ${vT1}={10,20,30,40,50,60,70};` +
-    `if rawlen(${vT1})~=7 or rawlen(${vT1})~=#${vT1} then ${vTrap}()end end;` +
-
-    // ── Layer 5: String pattern engine integrity ──
-    // Hooked gsub might return wrong replacement count or string.
+    // ── Layer 3: String pattern engine integrity ──
     `do local ${vT1},${vT2}=string.gsub("aaabbb","a","x");` +
     `if ${vT1}~="xxxbbb" or ${vT2}~=3 then ${vTrap}()end end;` +
 
-    // ── Layer 6: rawequal self-identity (novel) ──
-    // Env-loggers that proxy tables break object identity.
+    // ── Layer 4: rawequal self-identity ──
     `do local ${vT1}={};if not rawequal(${vT1},${vT1}) then ${vTrap}()end end;` +
 
-    // ── Layer 7: pcall error propagation ──
-    // Hooked pcall might not correctly return error objects.
-    `do local ${vT1},${vT2}=pcall(error,"__chk__");` +
-    `if ${vT1} or not tostring(${vT2}):find("__chk__") then ${vTrap}()end end;`;
+    // ── Layer 5: pcall error propagation ──
+    `do local ${vT1},${vT2}=pcall(error,"__ls_chk__");` +
+    `if ${vT1} or not tostring(${vT2}):find("__ls_chk__",1,true) then ${vTrap}()end end;` +
+
+    // ── Layer 6: rawlen (Luau supports rawlen) ──
+    // Wrap in pcall — if rawlen doesn't exist, skip silently (never false-trigger)
+    `do local _ok,${vT1}=pcall(rawlen,{1,2,3,4,5});` +
+    `if _ok and ${vT1}~=5 then ${vTrap}()end end;` +
+
+    // ── Layer 7: string.rep integrity ──
+    `do local ${vT1}=string.rep("ab",4);` +
+    `if ${vT1}~="abababab" or #${vT1}~=8 then ${vTrap}()end end;`;
 
   // Base-85 decoder
   const decoder =
