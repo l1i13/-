@@ -874,7 +874,7 @@ function passVM(src) {
   const LE = ']' + '='.repeat(bracketN) + ']';
 
   const [vA,vP,vy,ve,vSk,vC,vF,vV,vZ,vGs,vSb,vLd,vDec,vH,vStr,vFn,vEr,
-         vTrap,vT1,vT2,vT3] = Array.from({length:21}, mkSN); // safe names
+         vT1,vT2,vT3] = Array.from({length:19}, mkSN); // safe names
   const sig = rh(10).toUpperCase();
 
   // ── Anti-tamper: corrupt skip offset (safe — never freezes, just causes wrong decode) ──
@@ -926,7 +926,7 @@ function passVM(src) {
     `local _,${vLd}={[0]=1,2,4,8,16,32,64,128},loadstring or load;` +
     `${vC}=tostring;` +
     `local ${vZ},${vGs},${vSb}=string.pack,string.gsub,string.sub;` +
-    trap + checks + decoder + execute +
+    checks + decoder + execute +
     `end)()`
   );
 }
