@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LuaShield v10 — Roblox Lua Obfuscator</title>
+<title>LuaShield v11 — Roblox Lua Obfuscator</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&family=Syne:wght@700;800&display=swap');
 :root{
@@ -107,7 +107,7 @@ h1{animation:glitch 7s infinite}
     <h1>LUASHIELD</h1>
     <div class="head-sub">Roblox Lua Obfuscation Engine<span class="cur">_</span></div>
   </div>
-  <div class="badge">v10.0 — NTT ENGINE</div>
+  <div class="badge">v11.0 — NTT ENGINE</div>
 </header>
 
 <div class="tabs">
@@ -128,7 +128,7 @@ h1{animation:glitch 7s infinite}
     <span class="opt-lbl">MODULES:</span>
     <div class="tog on" id="t-com"  onclick="tog(this)"><span class="d"></span>STRIP COMMENTS</div>
     <div class="tog on" id="t-str"  onclick="tog(this)"><span class="d"></span>ENCODE STRINGS</div>
-    <div class="tog on" id="t-api"  onclick="tog(this)"><span class="d"></span>ENCODE APIS</div>
+    <div class="tog" id="t-api"  onclick="tog(this)"><span class="d"></span>ENCODE APIS</div>
     <div class="tog on" id="t-num"  onclick="tog(this)"><span class="d"></span>ENCODE NUMBERS</div>
     <div class="tog on" id="t-var"  onclick="tog(this)"><span class="d"></span>RENAME VARS</div>
     <div class="tog on" id="t-jnk"  onclick="tog(this)"><span class="d"></span>OPAQUE+JUNK</div>
@@ -773,15 +773,21 @@ function passAPINames(toks, dsV) {
 
   const gV   = mkN();
   const envV = mkN();
+  // Use load() for global lookup — Roblox-compatible (works even when _G doesn't have globals)
+  // load("return pairs")() resolves globals correctly in any Luau environment
+  const ldV = mkN();
   let header =
-    `local ${envV}=(getfenv and getfenv() or _G)\n` +
+    `local ${ldV}=load or loadstring\n` +
     `local ${gV}={}\n`;
 
   for (const [name, i] of apiMap) {
     const K = (Math.random()*200|0)+10;
     const M = ROLL_MULS[Math.random()*ROLL_MULS.length|0];
     const bytes = Array.from(name).map(c => c.charCodeAt(0));
-    header += `${gV}[${i}]=${envV}[${dsV}({${K},${M},${rollEnc(bytes,K,M).join(',')}})]\n`;
+    const decodeCall = `${dsV}({${K},${M},${rollEnc(bytes,K,M).join(',')}})`;
+    // load("return " .. name)() looks up the global in the actual Lua environment
+    // This works in Roblox, standard Lua 5.1, and Luau
+    header += `do local _f=${ldV}("return "..(${decodeCall})) ${gV}[${i}]=_f and _f() end\n`;
   }
 
   const res = [];
