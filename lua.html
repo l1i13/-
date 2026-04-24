@@ -430,12 +430,47 @@ function passComments(toks) {
 }
 
 // ══════════════════════════════════════════════
+//  UTF-8 UTILS  (Chinese / non-ASCII support)
+//  Lua source files are UTF-8; charCodeAt()&0xFF
+//  truncates high bytes of CJK chars → wrong bytes.
+//  These helpers convert correctly.
+// ══════════════════════════════════════════════
+function codeToUTF8(code) {
+  if (code < 0x80)    return [code];
+  if (code < 0x800)   return [0xC0|(code>>6),  0x80|(code&0x3F)];
+  if (code < 0x10000) return [0xE0|(code>>12), 0x80|((code>>6)&0x3F), 0x80|(code&0x3F)];
+  return [0xF0|(code>>18), 0x80|((code>>12)&0x3F), 0x80|((code>>6)&0x3F), 0x80|(code&0x3F)];
+}
+
+// Convert a JS string to a flat array of UTF-8 bytes (handles surrogate pairs)
+function strToUTF8(str) {
+  const bytes = [];
+  for (let i = 0; i < str.length; i++) {
+    let c = str.charCodeAt(i);
+    if (c >= 0xD800 && c <= 0xDBFF && i+1 < str.length) {
+      const lo = str.charCodeAt(i+1);
+      if (lo >= 0xDC00 && lo <= 0xDFFF) { c = 0x10000 + (c-0xD800)*0x400 + (lo-0xDC00); i++; }
+    }
+    bytes.push(...codeToUTF8(c));
+  }
+  return bytes;
+}
+
+// ══════════════════════════════════════════════
 //  PASS: Encode Strings → rolling XOR _ds(...)
 // ══════════════════════════════════════════════
 function luaUnesc(raw) {
   const out = []; let i = 0;
   while (i < raw.length) {
-    if (raw[i] !== '\\') { out.push(raw.charCodeAt(i++)); continue; }
+    if (raw[i] !== '\\') {
+      // Non-escape character: convert to UTF-8 bytes (handles CJK/emoji)
+      let c = raw.charCodeAt(i);
+      if (c >= 0xD800 && c <= 0xDBFF && i+1 < raw.length) {
+        const lo = raw.charCodeAt(i+1);
+        if (lo >= 0xDC00 && lo <= 0xDFFF) { c = 0x10000+(c-0xD800)*0x400+(lo-0xDC00); i++; }
+      }
+      out.push(...codeToUTF8(c)); i++; continue;
+    }
     i++;
     const e = raw[i] || '';
     if      (e==='a') { out.push(7);  i++; }
@@ -454,7 +489,7 @@ function luaUnesc(raw) {
       let j=i, num='';
       while (j-i<3 && j<raw.length && /[0-9]/.test(raw[j])) num+=raw[j++];
       out.push(parseInt(num)%256); i=j;
-    } else { out.push(raw.charCodeAt(i++)); }
+    } else { out.push(...codeToUTF8(raw.charCodeAt(i++))); }
   }
   return out;
 }
@@ -475,6 +510,7 @@ function passStrings(toks, dsV) {
     if (raw.length > 400) { res.push(tok); continue; }
     try {
       const bytes = luaUnesc(raw);
+      // luaUnesc now returns proper UTF-8 bytes (all 0-255), so CJK strings can be encoded
       if (!bytes.length || bytes.some(b => isNaN(b) || b < 0 || b > 255)) {
         res.push(tok); continue;
       }
@@ -755,11 +791,14 @@ function passVM(src) {
   const K = (Math.random()*200|0) + 10;
   const M = ROLL_MULS[Math.random()*ROLL_MULS.length|0];
 
+  // Convert source to UTF-8 bytes (critical for Chinese/non-ASCII in source code)
+  const srcBytes = strToUTF8(src);
+
   // Rolling XOR encode
   const enc = [];
   let k = K;
-  for (let i = 0; i < src.length; i++) {
-    enc.push((src.charCodeAt(i) & 0xFF) ^ (k & 0xFF));
+  for (let i = 0; i < srcBytes.length; i++) {
+    enc.push((srcBytes[i] ^ k) & 0xFF);
     k = (k * M + (i + 3)) % 256;
   }
 
