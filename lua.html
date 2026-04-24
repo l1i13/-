@@ -625,18 +625,36 @@ function passNumbers(toks) {
 }
 
 // ══════════════════════════════════════════════
-//  PASS: Inject Junk Strings (unchanged)
+//  HELPER: Is this line a safe injection point?
+//  Only inject junk/opaque after truly complete Lua statements.
 // ══════════════════════════════════════════════
-function rh(n) { let s=''; for(let i=0;i<n;i++) s+=(Math.random()*16|0).toString(16).toUpperCase(); return s; }
+function isSafeInject(line) {
+  const tr = line.trim();
+  if (!tr) return false;
+  if (tr.startsWith('--')) return false;
+  if (tr.startsWith('return')) return false;
+  if (tr.startsWith('local _')) return false;
+  const last = tr[tr.length - 1];
+  if ('({[,'.includes(last)) return false;
+  if (/[+\-*\/%^]$/.test(tr)) return false;
+  if (/\.\.$/.test(tr)) return false;
+  if (/\b(and|or|not|then|do|repeat|else|elseif|in)$/.test(tr)) return false;
+  if (/[)\]}]$/.test(tr)) return true;
+  if (/\b(end|nil|true|false)$/.test(tr)) return true;
+  if (/["']$/.test(tr)) return true;
+  if (/[a-zA-Z0-9_]$/.test(tr)) return true;
+  return false;
+}
 
+// ══════════════════════════════════════════════
+//  PASS: Inject Junk
+// ══════════════════════════════════════════════
 function passJunk(src, density) {
   const lines = src.split('\n');
   const out = []; let cnt = 0;
   for (const line of lines) {
     out.push(line);
-    const tr = line.trim();
-    if (!tr || tr.startsWith('--') || tr.startsWith('local _') || tr.startsWith('return')) continue;
-    if (!/[;)\]}]|end$/.test(tr) && tr.length < 5) continue;
+    if (!isSafeInject(line)) continue;
     if (Math.random() > density) continue;
     const junk = [
       () => `local _${rh(3)}=string.char(${Array.from({length:6+Math.random()*6|0},()=>Math.random()*254|0+1).join(',')})`,
@@ -644,6 +662,7 @@ function passJunk(src, density) {
       () => `local _${rh(3)}=tostring(${Math.random()*9999|0})`,
       () => `local _${rh(3)}=math.floor(${Math.random()*9999|0}+0)`,
       () => `local _${rh(3)}={${Array.from({length:4},()=>Math.random()*255|0).join(',')}}`,
+      () => `local _${rh(4)}=math.max(${Math.random()*255|0},${Math.random()*255|0})`,
     ];
     out.push(junk[Math.random()*junk.length|0]());
     cnt++;
@@ -652,9 +671,34 @@ function passJunk(src, density) {
 }
 
 // ══════════════════════════════════════════════
-//  NEW PASS: API Name Obfuscation  (NTT-style)
-//  Encodes known global names into a decode table
-//  e.g. print → _G[_g[1]]  where _g[1]=_ds({K,M,...})
+//  PASS: Opaque Predicates
+// ══════════════════════════════════════════════
+function passOpaque(src) {
+  const rn  = () => (Math.random()*99999|0)+1;
+  const rn2 = () => (Math.random()*255|0);
+  const ops = [
+    () => `if(${rn()}==${rn()})then end`,
+    () => `do local _a=${rn()} _a=_a+0 end`,
+    () => `if(math.abs(${rn()})==${rn()})then end`,
+    () => `do local _a=${rn()}+${rn()} _a=_a*1 end`,
+    () => `do local _a=math.floor(${rn()}+0)end`,
+    () => `if((${rn()}+${rn2()})==(${rn2()}+${rn()}))then end`,
+    () => `do local _a=${rn()} _a=math.max(_a,_a)end`,
+    () => `if(${rn()}~=${rn()+1})then end`,
+  ];
+  const lines = src.split('\n');
+  const out = [];
+  for (const line of lines) {
+    out.push(line);
+    if (!isSafeInject(line)) continue;
+    if (Math.random() > 0.72) continue;
+    out.push(ops[Math.random()*ops.length|0]());
+  }
+  return out.join('\n');
+}
+
+// ══════════════════════════════════════════════
+//  PASS: API Name Obfuscation
 // ══════════════════════════════════════════════
 const API_NAMES_LIST = [
   'print','warn','error','assert','pcall','xpcall',
@@ -668,23 +712,17 @@ const API_NAMES_LIST = [
 ];
 
 function passAPINames(toks, dsV) {
-  // Collect which API names actually appear
   const used = new Set();
   for (const t of toks)
     if (t.t === TK.ID && API_NAMES_LIST.includes(t.v)) used.add(t.v);
   if (!used.size) return [toks, ''];
 
-  // Assign indices
   const apiMap = new Map();
   let idx = 0;
   for (const name of used) apiMap.set(name, ++idx);
 
-  // _env: resolved environment (getfenv in Lua5.1/Roblox, fallback to _G)
-  // _gV[N]: stores the RESOLVED reference (the actual function/table), not the name string
-  // This avoids _G["print"] lookup at call time which can fail in loadstring envs
-  const gV   = mkN();  // table of resolved API refs
-  const envV = mkN();  // environment variable
-
+  const gV   = mkN();
+  const envV = mkN();
   let header =
     `local ${envV}=(getfenv and getfenv() or _G)\n` +
     `local ${gV}={}\n`;
@@ -693,20 +731,31 @@ function passAPINames(toks, dsV) {
     const K = (Math.random()*200|0)+10;
     const M = ROLL_MULS[Math.random()*ROLL_MULS.length|0];
     const bytes = Array.from(name).map(c => c.charCodeAt(0));
-    // Resolve to the actual value at load time: _gV[N] = env["print"] etc.
     header += `${gV}[${i}]=${envV}[${dsV}({${K},${M},${rollEnc(bytes,K,M).join(',')}})]\n`;
   }
 
-  // Replace tokens: identifier → _gV[N]  (direct reference, no _G lookup at call time)
-  // Skip if preceded by . or : (field/method access)
   const res = [];
   for (let i = 0; i < toks.length; i++) {
     const tok = toks[i];
     if (tok.t !== TK.ID || !apiMap.has(tok.v)) { res.push(tok); continue; }
+
+    // Skip if PRECEDED by . or :
     let p = i - 1;
     while (p >= 0 && toks[p].t === TK.WS) p--;
     if (p >= 0 && toks[p].t === TK.OP && (toks[p].v === '.' || toks[p].v === ':')) {
       res.push(tok); continue;
+    }
+    // Skip if FOLLOWED by . or : (used as namespace/library: string.format, math.floor)
+    let nx = i + 1;
+    while (nx < toks.length && toks[nx].t === TK.WS) nx++;
+    if (nx < toks.length && toks[nx].t === TK.OP && (toks[nx].v === '.' || toks[nx].v === ':')) {
+      res.push(tok); continue;
+    }
+    // Skip if used as a table key ({print = ...})
+    if (p >= 0 && toks[p].t === TK.OP && (toks[p].v === '{' || toks[p].v === ',')) {
+      if (nx < toks.length && toks[nx].t === TK.OP && toks[nx].v === '=') {
+        res.push(tok); continue;
+      }
     }
     res.push({ t: TK.OP, v: `${gV}[${apiMap.get(tok.v)}]` });
   }
@@ -714,87 +763,19 @@ function passAPINames(toks, dsV) {
 }
 
 // ══════════════════════════════════════════════
-//  NEW PASS: Opaque Predicates  (NTT-style)
-//  Inserts always-true/always-false math checks
-//  that make static analysis harder
-// ══════════════════════════════════════════════
-function passOpaque(src) {
-  const rn  = () => (Math.random()*99999|0)+1;
-  const rn2 = () => (Math.random()*255|0);
-  const ops = [
-    () => `if(${rn()}==${rn()})then end`,
-    () => `do local _a=${rn()} _a=_a+0 end`,
-    () => `if(math.abs(${rn()})==${rn()})then end`,
-    () => `if(type(${rn()})==type(${rn()}))then end`,
-    () => `do local _a=${rn()}+${rn()} _a=_a*1 end`,
-    () => `if(#{${rn()},${rn()},}==2)then end`,
-    () => `do local _a=math.floor(${rn()}+0)end`,
-    () => `if((${rn()}+${rn2()})==(${rn2()}+${rn()}))then end`,
-    () => `do local _a=${rn()} _a=math.max(_a,_a)end`,
-    () => `if(${rn()}~=${rn()+1})then end`,
-  ];
-  const lines = src.split('\n');
-  const out = [];
-  for (const line of lines) {
-    out.push(line);
-    const tr = line.trim();
-    // Never inject after: empty, comments, local _, or return statements
-    // (return must be the last statement in a Lua block)
-    if (!tr || tr.startsWith('--') || tr.startsWith('local _') || tr.startsWith('return')) continue;
-    if (Math.random() > 0.72) continue;
-    out.push(ops[Math.random()*ops.length|0]());
-  }
-  return out.join('\n');
-}
-
-// ══════════════════════════════════════════════
-//  BASE-85 ENCODER
-//  4 bytes → 5 printable ASCII chars (range 33–117)
-//  Same algorithm as the reference obfuscator
-//
-//  Decode in Lua:
-//    L = (c1-33)*85^4 + (c2-33)*85^3 + ... + (c5-33)
-//    bytes = string.pack("<I4", L)
-//  'z' is shorthand for '!!!!!' (all-zero group)
-// ══════════════════════════════════════════════
-function b85Enc(src) {
-  // String → bytes, padded to multiple of 4
-  const bytes = [];
-  for (let i = 0; i < src.length; i++) bytes.push(src.charCodeAt(i) & 0xFF);
-  while (bytes.length % 4 !== 0) bytes.push(0);
-
-  let out = '';
-  for (let i = 0; i < bytes.length; i += 4) {
-    // Little-endian uint32 (JS floats have 53-bit int precision, fits 32-bit fine)
-    const L = bytes[i] + bytes[i+1]*256 + bytes[i+2]*65536 + bytes[i+3]*16777216;
-    if (L === 0) { out += 'z'; continue; }
-    let n = L;
-    const c1 = 33 + Math.floor(n / 52200625); n %= 52200625; // 85^4
-    const c2 = 33 + Math.floor(n / 614125);   n %= 614125;  // 85^3
-    const c3 = 33 + Math.floor(n / 7225);     n %= 7225;    // 85^2
-    const c4 = 33 + Math.floor(n / 85);       n %= 85;      // 85^1
-    const c5 = 33 + n;                                        // 85^0
-    out += String.fromCharCode(c1, c2, c3, c4, c5);
-  }
-  return out;
-}
-
-// ══════════════════════════════════════════════
-//  PASS: VM WRAPPER  (v5.4 — Base-85, symbol-rich)
-//
-//  Output: return(function()...end)()
-//  Payload: base-85 encoded (chars 33–117, lots of symbols)
-//  Decoder: string.pack + string.gsub (same as reference)
-//  UTF-8 aware: Chinese/CJK characters handled correctly
+//  PASS: VM WRAPPER  (v5.5)
+//  Anti-tamper: infinite loop trap
+//  Anti-env-logger: debug.getinfo checks C functions
+//  Base-85 encoded, symbol-rich output
 // ══════════════════════════════════════════════
 function passVM(src) {
   const SIG  = rh(4).toUpperCase();
-  const skip = SIG.length + 1; // = 5 (Lua string.sub is 1-indexed)
+  const skip = SIG.length + 1;
 
-  // ── Base-85 encode (UTF-8 bytes) ─────────────
+  // Base-85 encode (UTF-8 bytes)
   const srcBytes = strToUTF8(src);
   const padded   = [...srcBytes];
-  while (padded.length % 4 !== 0) padded.push(32); // space pad
+  while (padded.length % 4 !== 0) padded.push(32);
 
   let b85 = '';
   for (let i = 0; i < padded.length; i += 4) {
@@ -811,30 +792,50 @@ function passVM(src) {
 
   const payload = SIG + b85;
 
-  // ── Safe long-string bracket ──────────────────
-  // base-85 uses chars 33-117 which include ']'=93 and '='=61.
-  // Find smallest N where ]=N=] doesn't appear in payload.
+  // Safe bracket level
   let bracketN = 2;
   while (payload.includes(']' + '='.repeat(bracketN) + ']')) bracketN++;
   const LS = '[' + '='.repeat(bracketN) + '[';
   const LE = ']' + '='.repeat(bracketN) + ']';
 
-  // ── Variable names ────────────────────────────
-  const [vA,vP,vy,ve,vSk,vC,vF,vV,vZ,vGs,vSb,vLd,vDec,vH,vStr,vFn,vEr,vT1] =
-    Array.from({length:18}, mkN);
+  const [vA,vP,vy,ve,vSk,vC,vF,vV,vZ,vGs,vSb,vLd,vDec,vH,vStr,vFn,vEr,
+         vTrap,vT1,vT2,vT3] = Array.from({length:21}, mkN);
   const sig = rh(10).toUpperCase();
 
-  const N1 = (Math.random()*200|0)+53;
-  const N2 = (Math.random()*300|0)+97;
+  // Infinite-loop trap: spins forever on tamper detection
+  const trap =
+    `local ${vTrap}=function()` +
+    `local _x=0;` +
+    `while true do _x=_x+(1);if _x<0 then break end end;` +
+    `end;`;
 
-  // ── Anti-tamper (reliable checks only) ───────
-  const at =
-    `do local ${vT1}=math.abs(-1);if ${vT1}~=1 then ${vSk}=${vSk}+${N1} end end;` +
-    `do local ${vT1}=type("x");if ${vT1}~="string" then ${vSk}=${vSk}+${N2} end end;`;
+  // Anti-tamper checks → call trap() if hooked
+  const checks =
+    // 1. math.abs sanity
+    `do local ${vT1}=math.abs(-7);if ${vT1}~=7 then ${vTrap}()end end;` +
+    // 2. type() sanity
+    `do local ${vT1}=type("x");if ${vT1}~="string" then ${vTrap}()end end;` +
+    // 3. select("#") count
+    `do local ${vT1}=select("#",1,2,3,4);if ${vT1}~=4 then ${vTrap}()end end;` +
+    // 4. string.byte must return exact value
+    `do local ${vT1}=string.byte("Z",1);if ${vT1}~=90 then ${vTrap}()end end;` +
+    // 5. string.char round-trip
+    `do local ${vT1}=string.char(72);if ${vT1}~="H" then ${vTrap}()end end;` +
+    // 6. tostring(0/0) contains "nan" (math hook detection)
+    `do local ${vT1}=tostring(0/0);if not ${vT1}:lower():find("nan") then ${vTrap}()end end;` +
+    // 7. pcall must succeed on valid calls
+    `do local ${vT1},${vT2}=pcall(math.abs,-5);if not ${vT1} or ${vT2}~=5 then ${vTrap}()end end;` +
+    // 8. Anti-env-logger: detect Lua-wrapped C functions via debug.getinfo
+    `do if debug and debug.getinfo then ` +
+    `local ${vT1}=debug.getinfo(string.byte,"S");` +
+    `if ${vT1} and ${vT1}.what~="C" then ${vTrap}()end;` +
+    `local ${vT2}=debug.getinfo(string.gsub,"S");` +
+    `if ${vT2} and ${vT2}.what~="C" then ${vTrap}()end;` +
+    `local ${vT3}=debug.getinfo(pcall,"S");` +
+    `if ${vT3} and ${vT3}.what~="C" then ${vTrap}()end;` +
+    `end end;`;
 
-  // ── Base-85 decoder ───────────────────────────
-  // Strips 4-char SIG → expands 'z' → decodes 5-char groups via
-  // a lazy __index table that memoises each decoded 4-byte chunk.
+  // Base-85 decoder
   const decoder =
     `local ${vH}=function(b)` +
     `b=${vSb}(b,${vSk});` +
@@ -845,7 +846,6 @@ function passVM(src) {
     `d=${vZ}("<I4",L);${vDec}[_]=d;return d;` +
     `end})) end;`;
 
-  // ── Load & execute ────────────────────────────
   const execute =
     `local ${vStr}=${vH}(${LS}${payload}${LE});` +
     `local ${vFn},${vEr}=(${vLd})(${vStr});` +
@@ -853,7 +853,6 @@ function passVM(src) {
     `local _ok,_er=pcall(${vFn});` +
     `if not _ok then error(tostring(_er)) end;`;
 
-  // ── Assemble single-line output ───────────────
   return (
     `--[[${sig}]]` +
     `return(function()` +
@@ -863,9 +862,7 @@ function passVM(src) {
     `local _,${vLd}={[0]=1,2,4,8,16,32,64,128},loadstring or load;` +
     `${vC}=tostring;` +
     `local ${vZ},${vGs},${vSb}=string.pack,string.gsub,string.sub;` +
-    at +
-    decoder +
-    execute +
+    trap + checks + decoder + execute +
     `end)()`
   );
 }
