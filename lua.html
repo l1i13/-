@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LuaShield v6 — Roblox Lua Obfuscator</title>
+<title>LuaShield v7 — Roblox Lua Obfuscator</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&family=Syne:wght@700;800&display=swap');
 :root{
@@ -107,7 +107,7 @@ h1{animation:glitch 7s infinite}
     <h1>LUASHIELD</h1>
     <div class="head-sub">Roblox Lua Obfuscation Engine<span class="cur">_</span></div>
   </div>
-  <div class="badge">v6.0 — NTT ENGINE</div>
+  <div class="badge">v7.0 — NTT ENGINE</div>
 </header>
 
 <div class="tabs">
@@ -639,8 +639,12 @@ function isSafeInject(line) {
   const last = tr[tr.length - 1];
   if ('({[,'.includes(last)) return false;
   if (/[+\-*\/%^]$/.test(tr)) return false;
-  if (/\.\.$/.test(tr)) return false;
+  if (/\.\.$$/.test(tr)) return false;
   if (/\b(and|or|not|then|do|repeat|else|elseif|in)$/.test(tr)) return false;
+  // KEY FIX: line ends with ) AND contains 'function' → it's a multi-line
+  // function definition start, not a complete statement.
+  // Covers: "StartLoop = function()", "Connect(function(dt)", "task.spawn(function()"
+  if (last === ')' && /\bfunction\b/.test(tr)) return false;
   if (/[)\]}]$/.test(tr)) return true;
   if (/\b(end|nil|true|false)$/.test(tr)) return true;
   if (/["']$/.test(tr)) return true;
