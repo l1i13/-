@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LuaShield v37 — Roblox Lua Obfuscator</title>
+<title>LuaShield v38 — Roblox Lua Obfuscator</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&family=Syne:wght@700;800&display=swap');
 :root{
@@ -107,7 +107,7 @@ h1{animation:glitch 7s infinite}
     <h1>LUASHIELD</h1>
     <div class="head-sub">Roblox Lua Obfuscation Engine<span class="cur">_</span></div>
   </div>
-  <div class="badge">v37.0 — LURAPH ENGINE</div>
+  <div class="badge">v38.0 — LURAPH ENGINE</div>
 </header>
 
 <div class="tabs">
@@ -1152,8 +1152,9 @@ function passVM(src) {
   const junkStrs   = ['service','player','value','result','data','config',
     'handle','state','timer','index','cache','frame','mode','flag'];
   const junkMath   = () => {
-    const a = (Math.random()*999|0)+1, b = (Math.random()*999|0)+1;
-    const ops = ['+','-','*'];
+    const a = (Math.random()*999|0)+100;
+    const b = (Math.random()*(a-1)|0)+1; // b < a so subtraction always positive
+    const ops = ['+','-'];
     return `${a}${ops[Math.random()*ops.length|0]}${b}`;
   };
   const junkStr = () => {
@@ -1162,8 +1163,8 @@ function passVM(src) {
     return `"${s}_${n}"`;
   };
 
-  // Generate 8000 lines of junk (produces ~400KB+ of Lua)
-  for (let j = 0; j < 8000; j++) {
+  // Generate 1500 lines of junk (safe within Roblox source limit ~75KB)
+  for (let j = 0; j < 1500; j++) {
     const v = junkNames[j % junkNames.length];
     const v2 = junkNames[(j+7) % junkNames.length];
     const kind = j % 12;
@@ -1177,9 +1178,9 @@ function passVM(src) {
       case 6:  junkLines.push(`local ${v}={${Array.from({length:8},()=>Math.random()*255|0).join(',')}}`); break;
       case 7:  junkLines.push(`local ${v}=string.char(${Array.from({length:6},()=>Math.random()*90|0+33).join(',')})`); break;
       case 8:  junkLines.push(`local ${v}=type(${junkStr()})`); break;
-      case 9:  junkLines.push(`local ${v}=select("#",${Array.from({length:4},()=>Math.random()*99|0).join(',')})`); break;
-      case 10: junkLines.push(`if(${junkMath()})==(${junkMath()})then local ${v}=${junkMath()} end`); break;
-      case 11: junkLines.push(`do local ${v}=${junkMath()} ${v}=${v}+0 local ${v2}=${v}*1 end`); break;
+      case 9:  junkLines.push(`local ${v}=math.floor(${junkMath()}+0.5)`); break;
+      case 10: junkLines.push(`local ${v}=math.min(${junkMath()},${junkMath()})`); break;
+      case 11: junkLines.push(`local ${v}=math.abs(${junkMath()})`); break;
     }
   }
 
