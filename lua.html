@@ -1571,10 +1571,6 @@ function runObf() {
     st.classList.add('show');
     document.getElementById('s-in').textContent  = fmtB(origSz);
     document.getElementById('s-out').textContent = fmtB(outSz);
-    document.getElementById('s-rt').textContent  = (outSz/origSz).toFixed(2)+'×';
-    document.getElementById('s-st').textContent  = totalStr;
-    document.getElementById('s-vr').textContent  = totalVar;
-    document.getElementById('s-jk').textContent  = totalJnk;
 
     lg('═══ Obfuscate Completed ═══', 'ok');
     document.getElementById('btnCopy').disabled = false;
