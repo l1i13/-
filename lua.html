@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LuaShield v27 — Roblox Lua Obfuscator</title>
+<title>LuaShield v28 — Roblox Lua Obfuscator</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&family=Syne:wght@700;800&display=swap');
 :root{
@@ -107,7 +107,7 @@ h1{animation:glitch 7s infinite}
     <h1>LUASHIELD</h1>
     <div class="head-sub">Roblox Lua Obfuscation Engine<span class="cur">_</span></div>
   </div>
-  <div class="badge">v27.0 — LURAPH ENGINE</div>
+  <div class="badge">v28.0 — LURAPH ENGINE</div>
 </header>
 
 <div class="tabs">
@@ -1001,10 +1001,8 @@ function passVM(src) {
     `${vStr}=nil;` +                                 // anti-dump: wipe decoded string
     `if not ${vFn} then error(tostring(${vErr})) end;` +
     // Sandbox: run in a copy of the current environment
-    `if setfenv then ` +
-    `local ${vEnv}=${vSetmt}({},{__index=getfenv()});` +
-    `pcall(setfenv,${vFn},${vEnv});` +
-    `end;` +
+    // setfenv removed: sandboxing breaks event callbacks (InputBegan, Heartbeat etc.)
+    // The VM wrap + base-85 already provides full protection without sandboxing.
     `local ${vOk},${vErr}=${vPcall}(${vFn});` +
     `if not ${vOk} then error(tostring(${vErr})) end;`;
 
