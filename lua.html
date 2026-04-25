@@ -2261,11 +2261,16 @@ async function loadHistoryFromFirestore() {
   try {
     const snap = await db.collection('users').doc(_currentUid).collection('history')
       .orderBy('ts','desc').limit(50).get();
-    const jobs = snap.docs.map(d => d.data());
-    saveHistory(jobs);
-    renderHistory();
+    if (!snap.empty) {
+      const jobs = snap.docs.map(d => d.data());
+      saveHistory(jobs);
+      renderHistory();
+    } else {
+      // Firestore empty - check local cache (maybe offline or first time)
+      renderHistory();
+    }
   } catch(e) {
-    console.warn('Firestore read failed, using cache', e);
+    console.warn('Firestore read failed, using local cache', e);
     renderHistory();
   }
 }
