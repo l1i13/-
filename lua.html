@@ -827,8 +827,15 @@ function loadF(f) {
     srcEl.value = e.target.result;
     updLC();
     lg('Loaded: ' + f.name, 'ok');
-    // Switch to paste view so user can see the loaded code
-    setUploadTab('paste');
+    // Only switch to paste view if dragged onto the textarea directly
+    // If in file mode, stay in file mode and just update filename display
+    const isFileMode = document.getElementById('ut-file')?.classList.contains('active');
+    if (!isFileMode) setUploadTab('paste');
+    else {
+      // Update drop zone label to show filename
+      const title = document.querySelector('.drop-title');
+      if (title) title.textContent = '✓ ' + f.name;
+    }
   };
   r.readAsText(f);
 }
