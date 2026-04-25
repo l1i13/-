@@ -2241,6 +2241,58 @@ function fmtJoined(user) {
   return 'Joined ' + d.toLocaleDateString('en-US', {year:'numeric',month:'short',day:'numeric'});
 }
 
+// ── Firestore history helpers ──
+function getHistCollection() {
+  if (!_currentUid) return null;
+  return db.collection('users').doc(_currentUid).collection('history');
+}
+
+function getHistory() {
+  try { return JSON.parse(localStorage.getItem(HIST_KEY + '_' + _currentUid) || '[]'); }
+  catch { return []; }
+}
+
+function saveHistory(jobs) {
+  if (_currentUid) localStorage.setItem(HIST_KEY + '_' + _currentUid, JSON.stringify(jobs));
+}
+
+async function loadHistoryFromFirestore() {
+  if (!_currentUid) return;
+  try {
+    const snap = await db.collection('users').doc(_currentUid).collection('history')
+      .orderBy('ts','desc').limit(50).get();
+    const jobs = snap.docs.map(d => d.data());
+    saveHistory(jobs);
+    renderHistory();
+  } catch(e) {
+    console.warn('Firestore read failed, using cache', e);
+    renderHistory();
+  }
+}
+
+async function addHistoryJobFirestore(filename, source, output) {
+  if (!_currentUid) return;
+  const job = {
+    id: Date.now().toString(), filename, source, output,
+    inputSize: new Blob([source]).size,
+    outputSize: new Blob([output]).size,
+    tier: document.querySelector('.tier-opt.selected .tier-name')?.textContent?.trim()?.split(' ')[0] || 'Medium',
+    status: 'completed', ts: Date.now()
+  };
+  try { await db.collection('users').doc(_currentUid).collection('history').doc(job.id).set(job); }
+  catch(e) { console.warn('Firestore write failed', e); }
+  const jobs = getHistory();
+  jobs.unshift(job);
+  saveHistory(jobs.slice(0, 50));
+  renderHistory();
+}
+
+async function deleteHistJobFirestore(id) {
+  try { await db.collection('users').doc(_currentUid).collection('history').doc(id).delete(); } catch(e) {}
+  saveHistory(getHistory().filter(j => j.id !== id));
+  renderHistory();
+}
+
 auth.onAuthStateChanged(user => {
   const overlay = document.getElementById('auth-overlay');
   const navUser = document.getElementById('nav-user');
@@ -2308,9 +2360,9 @@ let _histFilter = 'all';
 let _modalJob = null;
 let _modalTab = 'output';
 
-// getHistory/saveHistory replaced by Firestore versions
 
-// addHistoryJob replaced by addHistoryJobFirestore
+
+
 
 function deleteHistJob(id) {
   const j = getHistory().find(x => x.id === id);
