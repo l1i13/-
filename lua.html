@@ -2226,7 +2226,7 @@ function showPage(id, el) {
   const pg = document.getElementById('pg-'+id);
   if (pg) pg.style.display = '';
   if (id === 'hist') { if (_currentUid) loadHistoryFromFirestore(); else renderHistory(); }
-  if (id === 'api') renderApiList();
+  if (id === 'api') { _renderApiFromCache(); renderApiList(); }
 }
 
 function setUploadTab(mode) {
@@ -2747,6 +2747,12 @@ function downloadModalCode() {
 
 // showPage already handles hist rendering above
 
+function copyLoadstring(apiId) {
+  const url = WORKER_URL + '/' + apiId;
+  const str = 'loadstring(game:HttpGet("' + url + '"))()';
+  navigator.clipboard.writeText(str).then(() => showToast('Loadstring copied!'));
+}
+
 function loadApiScriptFile(input) {
   const f = input.files[0];
   if (!f) return;
@@ -2848,7 +2854,7 @@ function _renderApiItems(apis) {
           <button class="api-action" onclick="toggleApiStatus('${a.id}', ${a.active})">
             ${a.active ? 'Deactivate' : 'Activate'}
           </button>
-          <button class="api-action" onclick="navigator.clipboard.writeText(\`loadstring(game:HttpGet(\\"${WORKER_URL}/${a.id}\\"))()\`).then(()=>showToast('Loadstring copied!'))">Copy</button>
+          <button class="api-action" onclick="copyLoadstring('${a.id}')">Copy</button>
           <button class="api-action del" onclick="deleteApi('${a.id}')">Delete</button>
         </div>
       </div>`;
