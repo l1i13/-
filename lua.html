@@ -607,6 +607,98 @@ textarea::placeholder { color: var(--dim); }
   padding: 16px 24px; border-top: 1px solid var(--border);
   display: flex; justify-content: flex-end; gap: 8px;
 }
+
+/* ── API page ── */
+.api-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media(max-width:700px) { .api-grid { grid-template-columns: 1fr; } }
+.api-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 14px; padding: 24px; margin-bottom: 14px;
+}
+.api-card-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  margin-bottom: 16px; gap: 12px;
+}
+.api-card-title { font-weight: 700; font-size: 15px; margin-bottom: 4px; }
+.api-card-url {
+  font-family: 'JetBrains Mono', monospace; font-size: 11px;
+  color: var(--muted); word-break: break-all;
+}
+.api-status {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600;
+  flex-shrink: 0;
+}
+.api-status.active { background: rgba(74,222,128,.15); color: #4ade80; }
+.api-status.inactive { background: rgba(107,114,128,.15); color: #9ca3af; }
+.api-status::before { content:''; width:5px; height:5px; border-radius:50%; background:currentColor; }
+.api-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.api-meta-item {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 7px; padding: 6px 12px;
+  font-size: 12px; display: flex; align-items: center; gap: 6px;
+}
+.api-meta-label { color: var(--muted); }
+.api-meta-val { font-family: 'JetBrains Mono', monospace; font-weight: 600; }
+.api-copy-btn {
+  background: none; border: none; cursor: pointer; color: var(--muted);
+  padding: 2px; transition: color .15s;
+}
+.api-copy-btn:hover { color: var(--gold); }
+.api-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.api-action {
+  padding: 7px 14px; border-radius: 8px; cursor: pointer;
+  font-size: 12px; font-weight: 600; border: 1px solid var(--border2);
+  background: transparent; color: var(--muted); transition: all .15s;
+  font-family: 'Outfit', sans-serif;
+}
+.api-action:hover { border-color: var(--gold); color: var(--gold); }
+.api-action.del:hover { border-color: var(--red); color: var(--red); }
+.api-empty { text-align: center; padding: 60px 20px; color: var(--muted); }
+.api-empty svg { width:48px;height:48px;margin:0 auto 16px;opacity:.3;display:block; }
+
+/* ── API Modal ── */
+.api-modal-overlay {
+  position: fixed; inset: 0; z-index: 600;
+  background: rgba(0,0,0,.75); backdrop-filter: blur(4px);
+  display: none; align-items: center; justify-content: center; padding: 24px;
+}
+.api-modal-overlay.open { display: flex; }
+.api-modal {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 16px; width: 100%; max-width: 680px;
+  max-height: 88vh; display: flex; flex-direction: column;
+}
+.api-modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 22px 28px; border-bottom: 1px solid var(--border);
+}
+.api-modal-title { font-size: 18px; font-weight: 700; }
+.api-modal-body { padding: 24px 28px; overflow-y: auto; flex: 1; }
+.api-modal-footer {
+  padding: 18px 28px; border-top: 1px solid var(--border);
+  display: flex; justify-content: flex-end; gap: 10px;
+}
+.api-field { margin-bottom: 20px; }
+.api-field label {
+  font-size: 12px; color: var(--muted); font-weight: 600;
+  letter-spacing: .5px; display: block; margin-bottom: 8px;
+}
+.api-field input, .api-field textarea, .api-field select {
+  width: 100%; background: var(--bg2); border: 1px solid var(--border2);
+  color: var(--text); font-family: 'JetBrains Mono', monospace;
+  font-size: 13px; padding: 10px 14px; border-radius: 9px; outline: none;
+  transition: border-color .15s;
+}
+.api-field textarea { min-height: 200px; resize: vertical; font-size: 12px; line-height: 1.7; }
+.api-field input:focus, .api-field textarea:focus { border-color: var(--gold); }
+.api-field-hint { font-size: 11px; color: var(--muted); margin-top: 5px; }
+.api-url-display {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 9px; padding: 12px 16px;
+  font-family: 'JetBrains Mono', monospace; font-size: 12px;
+  color: var(--gold); word-break: break-all; line-height: 1.6;
+}
 </style>
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -631,6 +723,10 @@ textarea::placeholder { color: var(--dim); }
     <a class="nav-link" onclick="showPage('hist',this)">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="8" cy="8" r="6"/><path d="M8 5v3.5l2.5 1.5"/></svg>
       History
+    </a>
+    <a class="nav-link" onclick="showPage('api',this)">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 4h12M2 8h8M2 12h5"/><circle cx="12" cy="11" r="3"/><path d="M14.5 13.5l1.5 1.5"/></svg>
+      API
     </a>
 
   </div>
@@ -2122,7 +2218,7 @@ function whCopy() {
 <script>
 function showPage(id, el) {
   document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-  ['obf','wh','prot','hist'].forEach(p => {
+  ['obf','wh','prot','hist','api'].forEach(p => {
     const el2 = document.getElementById('pg-'+p);
     if (el2) el2.style.display = 'none';
   });
@@ -2130,6 +2226,7 @@ function showPage(id, el) {
   const pg = document.getElementById('pg-'+id);
   if (pg) pg.style.display = '';
   if (id === 'hist') { if (_currentUid) loadHistoryFromFirestore(); else renderHistory(); }
+  if (id === 'api') renderApiList();
 }
 
 function setUploadTab(mode) {
@@ -2650,6 +2747,178 @@ function downloadModalCode() {
 
 // showPage already handles hist rendering above
 
+
+// ══════════════════════════════════════════════
+//  API MANAGEMENT
+// ══════════════════════════════════════════════
+const WORKER_URL = "https://luashield.bylidu11.workers.dev";
+
+function genId() {
+  return Array.from({length:12}, () => 'abcdefghijklmnopqrstuvwxyz0123456789'[Math.random()*36|0]).join('');
+}
+function genKey() {
+  const segs = [4,4,4,4].map(n => Array.from({length:n}, () => 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'[Math.random()*36|0]).join(''));
+  return 'LS-' + segs.join('-');
+}
+
+function getApiCollection() {
+  if (!_currentUid) return null;
+  return db.collection('users').doc(_currentUid).collection('apis');
+}
+
+async function renderApiList() {
+  const list = document.getElementById('api-list');
+  if (!list || !_currentUid) return;
+  list.innerHTML = '<div style="color:var(--muted);font-size:14px;padding:20px 0">Loading APIs...</div>';
+  try {
+    const snap = await getApiCollection().orderBy('createdAt','desc').get();
+    if (snap.empty) {
+      list.innerHTML = `<div class="api-empty">
+        <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="24" cy="24" r="20"/><path d="M16 24h16M24 16v16"/></svg>
+        <div style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:6px">No APIs yet</div>
+        <div>Click "Create API" to get started</div>
+      </div>`;
+      return;
+    }
+    list.innerHTML = snap.docs.map(d => {
+      const a = d.data();
+      const endpoint = `${WORKER_URL}/${a.id}?key=${a.key}`;
+      const loadstr  = `loadstring(game:HttpGet("${endpoint}"))()`; 
+      return `
+      <div class="api-card">
+        <div class="api-card-header">
+          <div>
+            <div class="api-card-title">${a.name || 'Untitled API'}</div>
+            <div class="api-card-url">${WORKER_URL}/${a.id}</div>
+          </div>
+          <div class="api-status ${a.active?'active':'inactive'}">${a.active?'Active':'Inactive'}</div>
+        </div>
+        <div class="api-meta">
+          <div class="api-meta-item">
+            <span class="api-meta-label">Key</span>
+            <span class="api-meta-val">${a.key}</span>
+            <button class="api-copy-btn" onclick="navigator.clipboard.writeText('${a.key}').then(()=>showToast('Key copied!'))" title="Copy key">
+              <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="9" height="9" rx="1"/><path d="M2 10V2h8"/></svg>
+            </button>
+          </div>
+          <div class="api-meta-item">
+            <span class="api-meta-label">Loadstring</span>
+            <button class="api-copy-btn" onclick="navigator.clipboard.writeText(\`${loadstr}\`).then(()=>showToast('Loadstring copied!'))" title="Copy loadstring">
+              <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="9" height="9" rx="1"/><path d="M2 10V2h8"/></svg>
+            </button>
+            <span class="api-meta-val" style="font-size:10px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">loadstring(...)()</span>
+          </div>
+        </div>
+        <div class="api-actions">
+          <button class="api-action" onclick="openApiModal('${d.id}')">Edit</button>
+          <button class="api-action" onclick="toggleApiStatus('${d.id}', ${a.active})">
+            ${a.active ? 'Deactivate' : 'Activate'}
+          </button>
+          <button class="api-action del" onclick="deleteApi('${d.id}')">Delete</button>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    list.innerHTML = `<div style="color:var(--red);padding:20px">Failed to load APIs: ${e.message}</div>`;
+  }
+}
+
+let _editingApiId = null;
+
+async function openApiModal(docId) {
+  _editingApiId = docId;
+  document.getElementById('api-modal-title').textContent = docId ? 'Edit API' : 'Create API';
+  document.getElementById('api-script').value = '';
+  document.getElementById('api-name').value = '';
+  document.getElementById('api-active').value = 'true';
+
+  if (docId) {
+    try {
+      const doc = await getApiCollection().doc(docId).get();
+      const a = doc.data();
+      document.getElementById('api-name').value = a.name || '';
+      document.getElementById('api-script').value = a.script || '';
+      document.getElementById('api-active').value = a.active ? 'true' : 'false';
+      // Show URL and key for existing
+      const endpoint = `${WORKER_URL}/${a.id}?key=${a.key}`;
+      document.getElementById('api-url-display').textContent = endpoint;
+      document.getElementById('api-url-hint').textContent = endpoint;
+      document.getElementById('api-key-display').value = a.key;
+      document.getElementById('api-url-field').style.display = '';
+      document.getElementById('api-key-field').style.display = '';
+    } catch(e) { showToast('Failed to load API data'); return; }
+  } else {
+    document.getElementById('api-url-field').style.display = 'none';
+    document.getElementById('api-key-field').style.display = 'none';
+  }
+  document.getElementById('api-modal').classList.add('open');
+}
+
+function closeApiModal() {
+  document.getElementById('api-modal').classList.remove('open');
+  _editingApiId = null;
+}
+
+function copyApiKey() {
+  const val = document.getElementById('api-key-display').value;
+  navigator.clipboard.writeText(val).then(() => showToast('Key copied!'));
+}
+
+async function saveApi() {
+  const name   = document.getElementById('api-name').value.trim();
+  const script = document.getElementById('api-script').value.trim();
+  const active = document.getElementById('api-active').value === 'true';
+
+  if (!name) { showToast('Please enter a name'); return; }
+  if (!script) { showToast('Please enter script content'); return; }
+
+  try {
+    if (_editingApiId) {
+      // Update existing
+      await getApiCollection().doc(_editingApiId).update({ name, script, active });
+      showToast('API updated!');
+    } else {
+      // Create new
+      const id  = genId();
+      const key = genKey();
+      const data = {
+        id, key, name, script, active,
+        uid: _currentUid,
+        createdAt: Date.now()
+      };
+      await getApiCollection().doc(id).set(data);
+      // Also write to top-level /apis/ for Cloudflare Worker to read
+      await db.collection('apis').doc(id).set(data);
+      showToast('API created!');
+    }
+    closeApiModal();
+    renderApiList();
+  } catch(e) {
+    showToast('Error: ' + e.message);
+    console.error(e);
+  }
+}
+
+async function toggleApiStatus(docId, currentActive) {
+  try {
+    await getApiCollection().doc(docId).update({ active: !currentActive });
+    // Also update top-level
+    const doc = await getApiCollection().doc(docId).get();
+    await db.collection('apis').doc(docId).update({ active: !currentActive });
+    renderApiList();
+  } catch(e) { showToast('Error: ' + e.message); }
+}
+
+async function deleteApi(docId) {
+  if (!confirm('Delete this API? Users will no longer be able to access the script.')) return;
+  try {
+    await getApiCollection().doc(docId).delete();
+    await db.collection('apis').doc(docId).delete();
+    renderApiList();
+    showToast('API deleted');
+  } catch(e) { showToast('Error: ' + e.message); }
+}
+
 </script>
 
 <!-- Auth overlay -->
@@ -2746,5 +3015,68 @@ function downloadModalCode() {
     </div>
   </div>
 </div>
+
+<!-- ═══ API PAGE ═══ -->
+<div class="page" id="pg-api" style="display:none">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+    <div>
+      <div class="page-title">API Management</div>
+      <div class="page-sub" style="margin-bottom:0">Create and manage script APIs with key protection</div>
+    </div>
+    <button class="btn-sm btn-gold" onclick="openApiModal(null)" style="display:flex;align-items:center;gap:6px">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v10M3 8h10"/></svg>
+      Create API
+    </button>
+  </div>
+
+  <div id="api-list" style="margin-top:24px"></div>
+</div>
+
+<!-- API Create/Edit Modal -->
+<div class="api-modal-overlay" id="api-modal" onclick="if(event.target===this)closeApiModal()">
+  <div class="api-modal">
+    <div class="api-modal-header">
+      <div class="api-modal-title" id="api-modal-title">Create API</div>
+      <button class="modal-close" onclick="closeApiModal()">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 2l10 10M12 2L2 12"/></svg>
+      </button>
+    </div>
+    <div class="api-modal-body">
+      <input type="hidden" id="api-edit-id">
+      <div class="api-field">
+        <label>API NAME</label>
+        <input id="api-name" placeholder="e.g. My Script v1" maxlength="40">
+      </div>
+      <div class="api-field" id="api-url-field" style="display:none">
+        <label>API ENDPOINT</label>
+        <div class="api-url-display" id="api-url-display"></div>
+        <div class="api-field-hint">Users load your script with: loadstring(game:HttpGet("<span id="api-url-hint"></span>"))()</div>
+      </div>
+      <div class="api-field" id="api-key-field" style="display:none">
+        <label>ACCESS KEY</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input id="api-key-display" readonly style="font-family:JetBrains Mono,monospace;letter-spacing:1px">
+          <button class="btn-sm btn-ghost" onclick="copyApiKey()" style="flex-shrink:0;white-space:nowrap">Copy Key</button>
+        </div>
+      </div>
+      <div class="api-field">
+        <label>SCRIPT CONTENT <span style="color:var(--muted);font-weight:400">(paste your obfuscated script)</span></label>
+        <textarea id="api-script" placeholder="-- Paste your obfuscated Lua script here..."></textarea>
+      </div>
+      <div class="api-field">
+        <label>STATUS</label>
+        <select id="api-active">
+          <option value="true">Active — accepts requests</option>
+          <option value="false">Inactive — blocks all requests</option>
+        </select>
+      </div>
+    </div>
+    <div class="api-modal-footer">
+      <button class="btn-sm btn-ghost" onclick="closeApiModal()">Cancel</button>
+      <button class="btn-sm btn-gold" onclick="saveApi()">Save API</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
