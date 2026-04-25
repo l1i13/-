@@ -368,15 +368,18 @@ textarea::placeholder { color: var(--dim); }
 
 /* ── Profile dropdown ── */
 .profile-btn {
-  width: 34px; height: 34px; border-radius: 50%;
+  height: 40px; border-radius: 20px;
   background: var(--bg3); border: 1px solid var(--border);
-  cursor: pointer; display: grid; place-items: center;
+  cursor: pointer; display: flex; align-items: center; gap: 8px;
+  padding: 0 16px 0 12px;
   transition: all .15s; position: relative;
 }
 .profile-btn:hover { border-color: var(--gold); }
-.profile-btn svg { width: 16px; height: 16px; color: var(--gold); }
-.profile-btn img {
-  width: 34px; height: 34px; border-radius: 50%; object-fit: cover;
+.profile-btn svg { width: 18px; height: 18px; color: var(--gold); flex-shrink: 0; }
+.profile-btn img { display: none; }
+.profile-name {
+  font-size: 14px; font-weight: 500; color: var(--text);
+  max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 
 .profile-dropdown {
@@ -2048,11 +2051,11 @@ auth.onAuthStateChanged(user => {
     const joined = fmtJoined(user);
     navUser.style.display = 'flex';
     navUser.style.position = 'relative';
+    const displayName = savedNick || user.displayName || user.email || 'User';
     navUser.innerHTML = `
       <div class="profile-btn" onclick="toggleDrop(); event.stopPropagation();" title="Profile">
-        ${user.photoURL
-          ? `<img src="${user.photoURL}" referrerpolicy="no-referrer">`
-          : `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="6" r="3"/><path d="M2 14c0-3 2.7-5 6-5s6 2 6 5"/></svg>`}
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="6" r="3"/><path d="M2 14c0-3 2.7-5 6-5s6 2 6 5"/></svg>
+        <span class="profile-name">${displayName}</span>
       </div>
       <div class="profile-dropdown" id="profile-dd">
         <!-- Header -->
