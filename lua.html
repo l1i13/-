@@ -2747,6 +2747,17 @@ function downloadModalCode() {
 
 // showPage already handles hist rendering above
 
+function loadApiScriptFile(input) {
+  const f = input.files[0];
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = e => {
+    document.getElementById('api-script').value = e.target.result;
+    showToast('Loaded: ' + f.name);
+  };
+  r.readAsText(f);
+}
+
 
 // ══════════════════════════════════════════════
 //  API MANAGEMENT
@@ -2761,6 +2772,31 @@ function genKey() {
   return 'LS-' + segs.join('-');
 }
 
+const API_CACHE_KEY = 'ls_api_cache_';
+
+function getApiCache() {
+  try { return JSON.parse(localStorage.getItem(API_CACHE_KEY + _currentUid) || '[]'); }
+  catch { return []; }
+}
+function saveApiCache(apis) {
+  if (_currentUid) localStorage.setItem(API_CACHE_KEY + _currentUid, JSON.stringify(apis));
+}
+
+function _renderApiFromCache() {
+  const list = document.getElementById('api-list');
+  if (!list) return;
+  const apis = getApiCache();
+  if (!apis.length) {
+    list.innerHTML = `<div class="api-empty">
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="24" cy="24" r="20"/><path d="M16 24h16M24 16v16"/></svg>
+      <div style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:6px">No APIs yet</div>
+      <div>Click "Create API" to get started</div>
+    </div>`;
+    return;
+  }
+  _renderApiItems(apis);
+}
+
 function getApiCollection() {
   if (!_currentUid) return null;
   return db.collection('users').doc(_currentUid).collection('apis');
@@ -2769,19 +2805,24 @@ function getApiCollection() {
 async function renderApiList() {
   const list = document.getElementById('api-list');
   if (!list || !_currentUid) return;
-  list.innerHTML = '<div style="color:var(--muted);font-size:14px;padding:20px 0">Loading APIs...</div>';
+  // Render immediately from cache, then update from Firestore
+  _renderApiFromCache();
   try {
     const snap = await getApiCollection().orderBy('createdAt','desc').get();
-    if (snap.empty) {
-      list.innerHTML = `<div class="api-empty">
-        <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="24" cy="24" r="20"/><path d="M16 24h16M24 16v16"/></svg>
-        <div style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:6px">No APIs yet</div>
-        <div>Click "Create API" to get started</div>
-      </div>`;
-      return;
-    }
-    list.innerHTML = snap.docs.map(d => {
-      const a = d.data();
+    const apis = snap.docs.map(d => ({id: d.id, ...d.data()}));
+    saveApiCache(apis);
+    if (!snap.empty) _renderApiItems(apis);
+    else _renderApiFromCache();
+  } catch(e) {
+    console.warn('API fetch failed', e);
+  }
+}
+
+function _renderApiItems(apis) {
+  const list = document.getElementById('api-list');
+  if (!list) return;
+  if (!apis.length) { _renderApiFromCache(); return; }
+  list.innerHTML = apis.map(a => {
       const endpoint = `${WORKER_URL}/${a.id}?key=${a.key}`;
       const loadstr  = `loadstring(game:HttpGet("${endpoint}"))()`; 
       return `
@@ -2817,10 +2858,7 @@ async function renderApiList() {
           <button class="api-action del" onclick="deleteApi('${d.id}')">Delete</button>
         </div>
       </div>`;
-    }).join('');
-  } catch(e) {
-    list.innerHTML = `<div style="color:var(--red);padding:20px">Failed to load APIs: ${e.message}</div>`;
-  }
+  }).join('');
 }
 
 let _editingApiId = null;
@@ -2872,23 +2910,26 @@ async function saveApi() {
   if (!name) { showToast('Please enter a name'); return; }
   if (!script) { showToast('Please enter script content'); return; }
 
+  const saveBtn = document.querySelector('#api-modal .btn-gold');
+  const origText = saveBtn.textContent;
+  saveBtn.textContent = _editingApiId ? 'Saving...' : 'Creating API...';
+  saveBtn.disabled = true;
+
   try {
     if (_editingApiId) {
-      // Update existing
       await getApiCollection().doc(_editingApiId).update({ name, script, active });
+      // Update top-level
+      await db.collection('apis').doc(_editingApiId).update({ name, script, active });
       showToast('API updated!');
     } else {
-      // Create new
       const id  = genId();
       const key = genKey();
-      const data = {
-        id, key, name, script, active,
-        uid: _currentUid,
-        createdAt: Date.now()
-      };
-      await getApiCollection().doc(id).set(data);
-      // Also write to top-level /apis/ for Cloudflare Worker to read
-      await db.collection('apis').doc(id).set(data);
+      const data = { id, key, name, script, active, uid: _currentUid, createdAt: Date.now() };
+      // Write both in parallel
+      await Promise.all([
+        getApiCollection().doc(id).set(data),
+        db.collection('apis').doc(id).set(data)
+      ]);
       showToast('API created!');
     }
     closeApiModal();
@@ -2896,6 +2937,9 @@ async function saveApi() {
   } catch(e) {
     showToast('Error: ' + e.message);
     console.error(e);
+  } finally {
+    saveBtn.textContent = origText;
+    saveBtn.disabled = false;
   }
 }
 
@@ -3060,7 +3104,14 @@ async function deleteApi(docId) {
         </div>
       </div>
       <div class="api-field">
-        <label>SCRIPT CONTENT <span style="color:var(--muted);font-weight:400">(paste your obfuscated script)</span></label>
+        <label style="display:flex;align-items:center;justify-content:space-between">
+          <span>SCRIPT CONTENT <span style="color:var(--muted);font-weight:400">(paste or upload)</span></span>
+          <label style="cursor:pointer;color:var(--gold);font-size:11px;font-weight:600;display:flex;align-items:center;gap:4px">
+            <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M7 10V3M4 6l3-3 3 3"/><path d="M2 12h10"/></svg>
+            Upload File
+            <input type="file" id="api-script-file" accept=".lua,.txt" style="display:none" onchange="loadApiScriptFile(this)">
+          </label>
+        </label>
         <textarea id="api-script" placeholder="-- Paste your obfuscated Lua script here..."></textarea>
       </div>
       <div class="api-field">
