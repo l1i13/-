@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LuaShield v34 — Roblox Lua Obfuscator</title>
+<title>LuaShield v35 — Roblox Lua Obfuscator</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&family=Syne:wght@700;800&display=swap');
 :root{
@@ -107,7 +107,7 @@ h1{animation:glitch 7s infinite}
     <h1>LUASHIELD</h1>
     <div class="head-sub">Roblox Lua Obfuscation Engine<span class="cur">_</span></div>
   </div>
-  <div class="badge">v34.0 — LURAPH ENGINE</div>
+  <div class="badge">v35.0 — LURAPH ENGINE</div>
 </header>
 
 <div class="tabs">
@@ -895,79 +895,130 @@ function passAPINames(toks, dsV) {
 }
 
 // ══════════════════════════════════════════════
-//  PASS: AUTO WEBHOOK PROTECT
+//  PASS: AUTO WEBHOOK PROTECT — v34 Ultra
 //
-//  Scans source for Discord webhook URLs and:
-//  ① Replaces the real URL with a runtime-bound decoder
-//     Key = (game.PlaceId % 256 + fixed_K) makes it
-//     impossible to decode outside of Roblox.
-//  ② Injects N fake webhook decoys as junk locals
-//     so static extractors get flooded with fakes.
+//  Strategy:
+//  ① URL never appears complete — split into N random chunks
+//     each chunk independently XOR-encoded with different keys
+//  ② Chunks stored in SEPARATE local variables, not a table
+//     (table iteration is easy to intercept)
+//  ③ Assembly happens inside a pcall closure that:
+//     - Checks game.PlaceId is numeric (fails in fake envs)
+//     - Checks HttpService actually exists
+//     - Assembles URL from parts, sends, IMMEDIATELY nils all parts
+//  ④ 1000 fake webhooks injected as noise
+//  ⑤ Chunk variables renamed with mkSN() — no pattern
+//  ⑥ Silent fail: if any check fails, does nothing (no error)
 // ══════════════════════════════════════════════
 function passAutoWebhook(src) {
   const webhookRe = /https:\/\/discord(?:app)?\.com\/api\/webhooks\/\d+\/[\w\-]+/g;
   const found = [...new Set(src.match(webhookRe) || [])];
   if (!found.length) return src;
 
-  // Build per-URL protect code
   let injectHeader = '';
   const replacements = new Map();
 
   for (const url of found) {
     const bytes = strToUTF8(url);
-    const fixedK = (Math.random()*180|0) + 20;
-    const M = ROLL_MULS[Math.random()*ROLL_MULS.length|0];
 
-    // Encode: key = (PlaceId%256 + fixedK) mod 256, then rolling XOR
-    // JS side: we pre-XOR with fixedK only (PlaceId unknown at encode time)
-    // Lua side: key = (game.PlaceId % 256 + fixedK) % 256 then roll
-    const enc = [];
-    let k = fixedK;
-    for (let i = 0; i < bytes.length; i++) {
-      enc.push((bytes[i] ^ k) & 0xFF);
-      k = (k * M + (i + 3)) % 256;
+    // ── Split URL into 6-9 random-length chunks ──
+    const numChunks = (Math.random()*4|0) + 6;
+    const chunkSizes = [];
+    let remaining = bytes.length;
+    for (let i = 0; i < numChunks - 1; i++) {
+      const minSize = 1;
+      const maxSize = Math.floor(remaining / (numChunks - i));
+      const size = (Math.random() * (maxSize - minSize + 1) | 0) + minSize;
+      chunkSizes.push(size);
+      remaining -= size;
+    }
+    chunkSizes.push(remaining);
+
+    // ── Encode each chunk with independent keys ──
+    const chunkVars = [];
+    let offset = 0;
+    let chunkDefs = '';
+
+    for (const sz of chunkSizes) {
+      const chunk = bytes.slice(offset, offset + sz);
+      offset += sz;
+
+      const K = (Math.random()*200|0) + 20;
+      const M = ROLL_MULS[Math.random()*ROLL_MULS.length|0];
+
+      // XOR encode
+      const enc = [];
+      let k = K;
+      for (let i = 0; i < chunk.length; i++) {
+        enc.push((chunk[i] ^ k) & 0xFF);
+        k = (k * M + (i + 5)) % 256;
+      }
+
+      const vChunk = mkSN();
+      const vK = mkSN(), vM2 = mkSN(), vR = mkSN(), vI = mkSN();
+      const vBx = mkSN();
+      chunkVars.push(vChunk);
+
+      chunkDefs +=
+        `local ${vChunk}=function()\n` +
+        `local ${vBx}=bit32 and bit32.bxor or function(a,b)local s,v=1,0 while a>0 or b>0 do ` +
+        `local ra,rb=a%2,b%2 if ra~=rb then v=v+s end ` +
+        `a,b,s=(a-ra)/2,(b-rb)/2,s*2 end return v end\n` +
+        `local ${vK},${vM2},${vR}=${K},${M},{}\n` +
+        `for ${vI}=1,${enc.length} do\n` +
+        `${vR}[${vI}]=string.char(${vBx}({${enc.join(',')}}[${vI}],${vK}%256))\n` +
+        `${vK}=(${vK}*${vM2}+(${vI}+4))%256\n` +
+        `end\n` +
+        `return table.concat(${vR})\n` +
+        `end\n`;
     }
 
-    const [vK, vM, vN, vB, vI, vR, vFn] = Array.from({length:7}, mkSN);
+    // ── Send function: assemble + send + nil immediately ──
+    const vSend = mkSN(), vHS = mkSN(), vURL = mkSN();
+    const vP1 = mkSN(), vP2 = mkSN(), vOK = mkSN();
+    const assembleExpr = chunkVars.map(v => `${v}()`).join('..');
 
-    // Lua function that requires game.PlaceId to decode
-    // Without Roblox running, game.PlaceId is nil → decode fails → URL hidden
-    const vBxWH = mkSN();
-    const fn =
-      `local ${vFn}=function()\n` +
-      `local ${vBxWH}=bit32 and bit32.bxor or function(a,b)local s,v=1,0 while a>0 or b>0 do local ra,rb=a%2,b%2 if ra~=rb then v=v+s end a,b,s=(a-ra)/2,(b-rb)/2,s*2 end return v end\n` +
-      `local ${vK}=(game.PlaceId%256+${fixedK})%256\n` +
-      `local ${vM},${vN},${vR}=${M},{${enc.join(',')}},{}\n` +
-      `for ${vI}=1,#${vN} do\n` +
-      `${vR}[${vI}]=string.char(${vBxWH}(${vN}[${vI}],${vK}%256))\n` +
-      `${vK}=(${vK}*${vM}+(${vI}+4))%256\n` +
-      `end\n` +
-      `return table.concat(${vR})\n` +
+    const sendFn =
+      `local ${vSend}=function(payload)\n` +
+      `pcall(function()\n` +
+      // Verify we're in real Roblox (PlaceId is a real number)
+      `if type(game) ~= "userdata" then return end\n` +
+      `if type(game.PlaceId) ~= "number" then return end\n` +
+      `if game.PlaceId == 0 then return end\n` +
+      // Get HttpService
+      `local ${vOK},${vHS}=pcall(function()return game:GetService("HttpService")end)\n` +
+      `if not ${vOK} or not ${vHS} then return end\n` +
+      // Assemble URL from chunk functions, send, never store full URL in a variable
+      `local ${vURL}=${assembleExpr}\n` +
+      `pcall(function()${vHS}:PostAsync(${vURL},payload,Enum.HttpContentType.ApplicationJson)end)\n` +
+      `${vURL}=nil\n` +  // nil immediately after use
+      `end)\n` +
       `end\n`;
 
+    // Nil all chunk functions after sendFn is defined
+    const nilChunks = chunkVars.map(v => `${v}=nil`).join(' ');
 
-    // Generate fake decoy webhooks
-    const fakeCount = 1000;
+    // ── 1000 fake decoys ──
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-';
     let fakes = '';
-    for (let f = 0; f < fakeCount; f++) {
+    for (let f = 0; f < 1000; f++) {
       const fid = String(Math.floor(Math.random()*9e17+1e17));
-      const ftok = Array.from({length:68}, () => {
-        const c = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-';
-        return c[Math.random()*c.length|0];
-      }).join('');
+      const ftok = Array.from({length:68}, () => chars[Math.random()*chars.length|0]).join('');
       const fv = mkSN();
-      fakes += `local ${fv}="https://discord.com/api/webhooks/${fid}/${ftok}"
-`;
+      fakes += `local ${fv}="https://discord.com/api/webhooks/${fid}/${ftok}"\n`;
     }
 
-    injectHeader += fakes + fn;
-    replacements.set(url, `${vFn}()`);
+    injectHeader += fakes + chunkDefs + sendFn + nilChunks + '\n';
+    replacements.set(url, `${vSend}`);
   }
 
-  // Replace URLs in source
+  // Replace URL strings in source with the send function reference
   let result = src;
-  for (const [url, replacement] of replacements) {
-    result = result.split(url).join(replacement);
+  for (const [url, fn] of replacements) {
+    // Replace both quoted forms
+    result = result.split(`"${url}"`).join(fn);
+    result = result.split(`'${url}'`).join(fn);
+    result = result.split(url).join(fn);
   }
 
   return injectHeader + result;
@@ -1062,7 +1113,12 @@ function passVM(src) {
         NE=(Math.random()*160|0)+35, NF=(Math.random()*190|0)+45,
         NG=(Math.random()*175|0)+55, NH=(Math.random()*210|0)+65;
 
+  // ── Anti-Tamper + Anti-ENV Logger ──
+  // Strategy: corrupt vSkip → wrong SIG strip → b85 decode gets garbage
+  // → loadstring gets garbage → fails silently (no output to deobf tool)
+  // All checks are Roblox-verified safe (no debug lib, no function identity)
   const checks =
+    // Layer 1: Basic Lua invariants
     `do local ${vN1}=math.abs(-9);if ${vN1}~=9 then ${vSkip}=${vSkip}+${NA} end end;` +
     `do local ${vN2}=type("x");if ${vN2}~="string" then ${vSkip}=${vSkip}+${NB} end end;` +
     `do local ${vN3}=select("#",1,2,3,4);if ${vN3}~=4 then ${vSkip}=${vSkip}+${NC} end end;` +
@@ -1070,7 +1126,18 @@ function passVM(src) {
     `do local ${vN5}=tostring(false);if ${vN5}~="false" then ${vSkip}=${vSkip}+${NE} end end;` +
     `do local ${vN6}=string.byte("M",1);if ${vN6}~=77 then ${vSkip}=${vSkip}+${NF} end end;` +
     `do local ${vN7}=string.char(88);if ${vN7}~="X" then ${vSkip}=${vSkip}+${NG} end end;` +
-    `do local ${vN8},${vN1}=pcall(math.abs,-3);if not ${vN8} or ${vN1}~=3 then ${vSkip}=${vSkip}+${NH} end end;`;
+    `do local ${vN8},${vN1}=pcall(math.abs,-3);if not ${vN8} or ${vN1}~=3 then ${vSkip}=${vSkip}+${NH} end end;` +
+    // Layer 2: Anti-ENV Logger — verify return values not just function existence
+    // ENV loggers must return correct values but slip up on exact numeric results
+    `do local ${vN2}=math.floor(3.9);if ${vN2}~=3 then ${vSkip}=${vSkip}+${NA} end end;` +
+    `do local ${vN3}=math.floor(math.pi*1e4);if ${vN3}~=31415 then ${vSkip}=${vSkip}+${NB} end end;` +
+    `do local ${vN4}=string.len("LuaShield");if ${vN4}~=9 then ${vSkip}=${vSkip}+${NC} end end;` +
+    `do local ${vN5}=table.concat({"a","b","c"});if ${vN5}~="abc" then ${vSkip}=${vSkip}+${ND} end end;` +
+    `do local ${vN6},${vN7}=string.gsub("xxxx","x","y");if ${vN6}~="yyyy" or ${vN7}~=4 then ${vSkip}=${vSkip}+${NE} end end;` +
+    // Layer 3: Anti-Deobf — verify Roblox-specific environment signals
+    // Fake envs don't have 'game' as userdata or return wrong typeof
+    `do if typeof then local ${vN8}=typeof(Vector3.new());if ${vN8}~="Vector3" then ${vSkip}=${vSkip}+${NF} end end end;` +
+    `do if game then local ${vN1}=type(game);if ${vN1}~="userdata" then ${vSkip}=${vSkip}+${NG} end end end;`;
 
   // ── Dead code blocks (confuse deobfuscators) ──
   const dead =
