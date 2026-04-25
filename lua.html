@@ -1421,7 +1421,7 @@ function passVM(src) {
 // ══════════════════════════════════════════════
 function runObf() {
   const src = srcEl.value.trim();
-  if (!src) { lg('請先輸入程式碼', 'warn'); return; }
+  if (!src) { lg('Please enter source code first', 'warn'); return; }
 
   logEl.innerHTML = ''; logEl.classList.add('show');
   document.getElementById('stats').classList.remove('show');
@@ -1549,7 +1549,7 @@ function runObf() {
       str = protResult.src;
       if (protResult.code.trim()) {
         str = protResult.code + '\n' + str;
-        lg('✓ Protection code auto-injected (anti-hook + anti-env + anti-http)', 'ok');
+        lg('✓ Protection code injected', 'ok');
       }
     }
 
@@ -1566,7 +1566,7 @@ function runObf() {
     if (doVM) {
       setP(88, 'Applying VM wrap (base-85)...');
       str = passVM(str);
-      lg(`✓ VM wrap layer 1 applied`, 'ok');
+      lg('✓ VM wrap layer 1 applied', 'ok');
       // MEDIUM (2 passes): double wrap — attacker must decode 2 VM layers
       // HEAVY  (3 passes): triple wrap — 3 layers, each with different keys
       if (PASSES >= 2) {
@@ -1595,12 +1595,12 @@ function runObf() {
     document.getElementById('s-vr').textContent  = totalVar;
     document.getElementById('s-jk').textContent  = totalJnk;
 
-    lg('═══ 混淆完成 ═══', 'ok');
+    lg('═══ Obfuscate Completed ═══', 'ok');
     document.getElementById('btnCopy').disabled = false;
     document.getElementById('btnDl').disabled   = false;
   } catch(err) {
     lg('ERROR: ' + err.message, 'warn');
-    setP(0, '發生錯誤');
+    setP(0, 'Error occurred');
     console.error(err);
   }
   document.getElementById('btnRun').disabled = false;
@@ -1762,7 +1762,7 @@ function runProtInject() {
 
 function copyProtCode() {
   const t = document.getElementById('prot-out').textContent;
-  navigator.clipboard.writeText(t).then(() => alert('已複製！'));
+  navigator.clipboard.writeText(t).then(() => alert('Copied!'));
 }
 
 function generateFakeWH(realUrl, count, keyStrength) {
@@ -1805,7 +1805,7 @@ function whGenerate() {
 function whPreview() {}
 function whCopy() {
   const t = document.getElementById('wh-out').textContent;
-  navigator.clipboard.writeText(t).then(() => alert('已複製！'));
+  navigator.clipboard.writeText(t).then(() => alert('Copied!'));
 }
 </script>
 <script>
@@ -1835,10 +1835,24 @@ function setTier(el, val) {
 }
 
 // Override doClear to also hide output section
-const _origClear = doClear;
 function doClear() {
-  _origClear();
-  document.getElementById('out-section').style.display = 'none';
+  const srcEl = document.getElementById('src');
+  const outEl = document.getElementById('out');
+  const logEl = document.getElementById('log');
+  if (srcEl) srcEl.value = '';
+  if (outEl) outEl.value = '';
+  if (logEl) { logEl.innerHTML = ''; logEl.classList.remove('show'); }
+  const prog = document.getElementById('prog');
+  if (prog) prog.classList.remove('show');
+  const stats = document.getElementById('stats');
+  if (stats) stats.classList.remove('show');
+  const btnCopy = document.getElementById('btnCopy');
+  const btnDl = document.getElementById('btnDl');
+  if (btnCopy) btnCopy.disabled = true;
+  if (btnDl) btnDl.disabled = true;
+  const sec = document.getElementById('out-section');
+  if (sec) sec.style.display = 'none';
+  updLC();
 }
 
 // Override setP to show progress nicely
