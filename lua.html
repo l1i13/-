@@ -444,6 +444,41 @@ textarea::placeholder { color: var(--dim); }
   opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 9999;
 }
 .pd-toast.show { opacity: 1; }
+
+/* ── Confirm dialog ── */
+.confirm-overlay {
+  position: fixed; inset: 0; z-index: 600;
+  background: rgba(0,0,0,.6); backdrop-filter: blur(4px);
+  display: none; align-items: center; justify-content: center;
+}
+.confirm-overlay.open { display: flex; }
+.confirm-box {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 14px; padding: 28px 32px; width: 100%; max-width: 380px;
+  text-align: center;
+}
+.confirm-icon {
+  width: 48px; height: 48px; border-radius: 50%;
+  background: rgba(248,113,113,.12); display: grid;
+  place-items: center; margin: 0 auto 16px;
+}
+.confirm-icon svg { width: 22px; height: 22px; color: var(--red); }
+.confirm-title { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+.confirm-msg { font-size: 14px; color: var(--muted); margin-bottom: 24px; line-height: 1.6; }
+.confirm-btns { display: flex; gap: 10px; justify-content: center; }
+.confirm-cancel {
+  padding: 10px 24px; border-radius: 9px; cursor: pointer;
+  font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 600;
+  background: var(--bg3); color: var(--text);
+  border: 1px solid var(--border2); transition: all .15s;
+}
+.confirm-cancel:hover { border-color: var(--gold); color: var(--gold); }
+.confirm-delete {
+  padding: 10px 24px; border-radius: 9px; cursor: pointer;
+  font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 600;
+  background: var(--red); color: #fff; border: none; transition: all .15s;
+}
+.confirm-delete:hover { opacity: .85; }
 .select-styled:focus { border-color: var(--gold); }
 
 /* ── History page ── */
@@ -576,6 +611,7 @@ textarea::placeholder { color: var(--dim); }
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
 
@@ -1861,7 +1897,7 @@ function runObf() {
     try {
       const isFileMode = document.getElementById('ut-file')?.classList.contains('active');
       const fname = (isFileMode && _lastLoadedFilename) ? _lastLoadedFilename : 'Script.lua';
-      addHistoryJob(fname, src, str);
+      addHistoryJobFirestore(fname, src, str);
     } catch(e) {}
 
     const outSz = new Blob([str]).size;
@@ -2093,7 +2129,7 @@ function showPage(id, el) {
   if (el) el.classList.add('active');
   const pg = document.getElementById('pg-'+id);
   if (pg) pg.style.display = '';
-  if (id === 'hist') renderHistory();
+  if (id === 'hist') { if (_currentUid) loadHistoryFromFirestore(); else renderHistory(); }
 }
 
 function setUploadTab(mode) {
@@ -2156,6 +2192,7 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
+const db = firebase.firestore();
 const provider = new firebase.auth.GoogleAuthProvider();
 
 function signInWithGoogle() {
@@ -2165,6 +2202,7 @@ function signInWithGoogle() {
 }
 
 function signOut() {
+  _currentUid = null;
   auth.signOut();
 }
 
@@ -2186,7 +2224,7 @@ document.addEventListener('click', e => {
 function saveNickname() {
   const val = document.getElementById('pd-nick-input').value.trim();
   if (!val) return;
-  localStorage.setItem('ls_nickname', val);
+  localStorage.setItem('ls_nickname_' + (_currentUid||''), val);
   document.getElementById('pd-name-display').textContent = val;
   showToast('Nickname updated!');
 }
@@ -2208,8 +2246,10 @@ auth.onAuthStateChanged(user => {
   const navUser = document.getElementById('nav-user');
   if (user) {
     overlay.style.display = 'none';
+    _currentUid = user.uid;
+    loadHistoryFromFirestore();
     const initial = (user.displayName || user.email || '?')[0].toUpperCase();
-    const savedNick = localStorage.getItem('ls_nickname') || user.displayName || '';
+    const savedNick = localStorage.getItem('ls_nickname_' + user.uid) || user.displayName || '';
     const joined = fmtJoined(user);
     navUser.style.display = 'flex';
     navUser.style.position = 'relative';
@@ -2268,35 +2308,22 @@ let _histFilter = 'all';
 let _modalJob = null;
 let _modalTab = 'output';
 
-function getHistory() {
-  try { return JSON.parse(localStorage.getItem(HIST_KEY) || '[]'); }
-  catch { return []; }
-}
+// getHistory/saveHistory replaced by Firestore versions
 
-function saveHistory(jobs) {
-  localStorage.setItem(HIST_KEY, JSON.stringify(jobs));
-}
-
-function addHistoryJob(filename, source, output) {
-  const jobs = getHistory();
-  jobs.unshift({
-    id: Date.now().toString(),
-    filename,
-    source,
-    output,
-    inputSize: new Blob([source]).size,
-    outputSize: new Blob([output]).size,
-    tier: document.querySelector('.tier-opt.selected .tier-name')?.textContent?.trim()?.split(' ')[0] || 'Medium',
-    status: 'completed',
-    ts: Date.now()
-  });
-  // Keep last 50 jobs
-  saveHistory(jobs.slice(0, 50));
-}
+// addHistoryJob replaced by addHistoryJobFirestore
 
 function deleteHistJob(id) {
-  saveHistory(getHistory().filter(j => j.id !== id));
-  renderHistory();
+  const j = getHistory().find(x => x.id === id);
+  const name = j ? j.filename : 'this job';
+  showConfirm(
+    'Delete Job?',
+    `"${name}" will be permanently deleted. This action cannot be undone.`,
+    () => {
+      saveHistory(getHistory().filter(x => x.id !== id));
+      renderHistory();
+      showToast('Job deleted');
+    }
+  );
 }
 
 function fmtSize(b) {
@@ -2373,8 +2400,17 @@ async function downloadSelectedAsZip() {
     });
   }
   const zip = new JSZip();
+  const nameCount = {};
   jobs.forEach(j => {
-    const name = j.filename.replace(/\.lua$/,'') + '_obfuscated.lua';
+    const base = j.filename.replace(/\.lua$/,'') + '_obfuscated';
+    nameCount[base] = (nameCount[base] || 0) + 1;
+  });
+  const nameSeen = {};
+  jobs.forEach(j => {
+    const base = j.filename.replace(/\.lua$/,'') + '_obfuscated';
+    const total = nameCount[base];
+    nameSeen[base] = (nameSeen[base] || 0) + 1;
+    const name = total > 1 ? `${base}_${nameSeen[base]}.lua` : `${base}.lua`;
     zip.file(name, j.output);
   });
   const blob = await zip.generateAsync({type:'blob'});
@@ -2387,11 +2423,17 @@ async function downloadSelectedAsZip() {
 
 function deleteSelected() {
   if (!_selected.size) return;
-  const jobs = getHistory().filter(j => !_selected.has(j.id));
-  saveHistory(jobs);
-  _selected.clear();
-  renderHistory();
-  showToast('Deleted selected jobs');
+  const count = _selected.size;
+  showConfirm(
+    `Delete ${count} Job${count!==1?'s':''}?`,
+    `${count} job${count!==1?'s':''} will be permanently deleted. This action cannot be undone.`,
+    () => {
+      saveHistory(getHistory().filter(j => !_selected.has(j.id)));
+      _selected.clear();
+      renderHistory();
+      showToast(`Deleted ${count} job${count!==1?'s':''}`);
+    }
+  );
 }
 
 function renderHistory() {
@@ -2630,5 +2672,22 @@ function downloadModalCode() {
   </div>
 </div>
 
+
+<!-- Confirm dialog -->
+<div class="confirm-overlay" id="confirm-overlay">
+  <div class="confirm-box">
+    <div class="confirm-icon">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M3 5h10M6 5V3h4v2M6 8v5M10 8v5M5 5l.5 8h5L11 5"/>
+      </svg>
+    </div>
+    <div class="confirm-title" id="confirm-title">Delete Job?</div>
+    <div class="confirm-msg" id="confirm-msg">This action cannot be undone.</div>
+    <div class="confirm-btns">
+      <button class="confirm-cancel" onclick="closeConfirm()">Cancel</button>
+      <button class="confirm-delete" id="confirm-ok">Delete</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
