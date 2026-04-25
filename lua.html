@@ -1852,7 +1852,9 @@ function runObf() {
     updLC();
     // Save to history
     try {
-      const fname = (document.getElementById('fi')?.files?.[0]?.name) || 'script.lua';
+      const uploadedFile = document.getElementById('fi')?.files?.[0];
+      const isFileMode = document.getElementById('ut-file')?.classList.contains('active');
+      const fname = (isFileMode && uploadedFile) ? uploadedFile.name : 'Paste Code';
       addHistoryJob(fname, src, str);
     } catch(e) {}
 
