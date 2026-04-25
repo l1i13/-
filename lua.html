@@ -380,17 +380,17 @@ textarea::placeholder { color: var(--dim); }
     <div class="section-sub">Choose your protection level. Higher tiers provide more security but increase file size.</div>
 
     <div class="tier-options" id="tiers">
-      <div class="tier-opt selected" onclick="setTier(this,'1')">
+      <div class="tier-opt" onclick="setTier(this,'1')">
         <div class="tier-radio"></div>
         <div class="tier-info">
           <div class="tier-name">Light <span class="badge-rec">Fast</span></div>
           <div class="tier-desc">Single VM layer. Quick processing, smaller output.</div>
         </div>
       </div>
-      <div class="tier-opt" onclick="setTier(this,'2')">
+      <div class="tier-opt selected" onclick="setTier(this,'2')">
         <div class="tier-radio"></div>
         <div class="tier-info">
-          <div class="tier-name">Standard <span class="badge-rec">Recommended</span></div>
+          <div class="tier-name">Medium <span class="badge-rec">Recommended</span></div>
           <div class="tier-desc">Double VM layer. Balanced security and performance.</div>
         </div>
       </div>
@@ -1961,7 +1961,7 @@ function setUploadTab(mode) {
   document.getElementById('ut-paste').classList.toggle('active', mode==='paste');
   document.getElementById('drop').style.display = mode==='file' ? '' : 'none';
   document.getElementById('paste-area').classList.toggle('active', mode==='paste');
-  if (mode==='file') document.getElementById('fi').click();
+  // No auto file dialog - user clicks Browse or drags to upload
 }
 
 function setTier(el, val) {
