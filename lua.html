@@ -2258,17 +2258,19 @@ function saveHistory(jobs) {
 
 async function loadHistoryFromFirestore() {
   if (!_currentUid) return;
+  // Show loading state immediately
+  const list = document.getElementById('hist-list');
+  if (list) list.innerHTML = `<div class="hist-empty" style="padding:40px 0">
+    <div style="color:var(--muted);font-size:14px">Loading history...</div>
+  </div>`;
   try {
     const snap = await db.collection('users').doc(_currentUid).collection('history')
       .orderBy('ts','desc').limit(50).get();
     if (!snap.empty) {
       const jobs = snap.docs.map(d => d.data());
       saveHistory(jobs);
-      renderHistory();
-    } else {
-      // Firestore empty - check local cache (maybe offline or first time)
-      renderHistory();
     }
+    renderHistory();
   } catch(e) {
     console.warn('Firestore read failed, using local cache', e);
     renderHistory();
