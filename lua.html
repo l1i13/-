@@ -2869,6 +2869,14 @@ async function openApiModal(docId) {
   document.getElementById('api-script').value = '';
   document.getElementById('api-name').value = '';
   document.getElementById('api-active').value = 'true';
+  // Update status select options based on mode
+  const sel = document.getElementById('api-active');
+  if (!docId) {
+    sel.innerHTML = '<option value="true">Creating API...</option><option value="false">Inactive — blocks all requests</option>';
+    sel.value = 'true';
+  } else {
+    sel.innerHTML = '<option value="true">Active — accepts requests</option><option value="false">Inactive — blocks all requests</option>';
+  }
 
   if (docId) {
     try {
@@ -2876,7 +2884,9 @@ async function openApiModal(docId) {
       const a = doc.data();
       document.getElementById('api-name').value = a.name || '';
       document.getElementById('api-script').value = a.script || '';
-      document.getElementById('api-active').value = a.active ? 'true' : 'false';
+      const selEl = document.getElementById('api-active');
+      selEl.innerHTML = '<option value="true">Active — accepts requests</option><option value="false">Inactive — blocks all requests</option>';
+      selEl.value = a.active ? 'true' : 'false';
       // Show URL and key for existing
       const endpoint = `${WORKER_URL}/${a.id}?key=${a.key}`;
       document.getElementById('api-url-display').textContent = endpoint;
