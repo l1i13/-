@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LuaShield v30 — Roblox Lua Obfuscator</title>
+<title>LuaShield v31 — Roblox Lua Obfuscator</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&family=Syne:wght@700;800&display=swap');
 :root{
@@ -107,7 +107,7 @@ h1{animation:glitch 7s infinite}
     <h1>LUASHIELD</h1>
     <div class="head-sub">Roblox Lua Obfuscation Engine<span class="cur">_</span></div>
   </div>
-  <div class="badge">v30.0 — LURAPH ENGINE</div>
+  <div class="badge">v31.0 — LURAPH ENGINE</div>
 </header>
 
 <div class="tabs">
@@ -119,21 +119,24 @@ h1{animation:glitch 7s infinite}
 <!-- ═══ OBFUSCATE PANEL ═══ -->
 <div class="panel active" id="tab-obf">
   <div class="opts">
-    <span class="opt-lbl">PASSES:</span>
+    <span class="opt-lbl">STRENGTH:</span>
     <select class="sel" id="passes">
-      <option value="1">× 1 — LIGHT</option>
-      <option value="2" selected>× 2 — MEDIUM</option>
-      <option value="3">× 3 — HEAVY</option>
+      <option value="1">LIGHT — 1× VM</option>
+      <option value="2" selected>MEDIUM — 2× VM ★</option>
+      <option value="3">HEAVY — 3× VM</option>
     </select>
     <div class="opt-sep"></div>
-    <span class="opt-lbl">MODULES:</span>
     <div class="tog on" id="t-com"  onclick="tog(this)"><span class="d"></span>STRIP COMMENTS</div>
-    <div class="tog on" id="t-str"  onclick="tog(this)"><span class="d"></span>ENCODE STRINGS</div>
-    <div class="tog" id="t-api"  onclick="tog(this)"><span class="d"></span>ENCODE APIS</div>
-    <div class="tog on" id="t-num"  onclick="tog(this)"><span class="d"></span>ENCODE NUMBERS</div>
-    <div class="tog on" id="t-var"  onclick="tog(this)"><span class="d"></span>RENAME VARS</div>
-    <div class="tog on" id="t-jnk"  onclick="tog(this)"><span class="d"></span>OPAQUE+JUNK</div>
     <div class="tog on" id="t-vm"   onclick="tog(this)"><span class="d"></span>VM WRAP</div>
+    <div class="tog on" id="t-wha"  onclick="tog(this)"><span class="d"></span>AUTO WEBHOOK PROTECT</div>
+    <!-- hidden toggles for compatibility -->
+    <div style="display:none">
+      <div class="tog" id="t-api"></div>
+      <div class="tog" id="t-str"></div>
+      <div class="tog" id="t-num"></div>
+      <div class="tog" id="t-var"></div>
+      <div class="tog" id="t-jnk"></div>
+    </div>
   </div>
 
   <div class="eds">
@@ -892,6 +895,92 @@ function passAPINames(toks, dsV) {
 }
 
 // ══════════════════════════════════════════════
+//  PASS: AUTO WEBHOOK PROTECT
+//
+//  Scans source for Discord webhook URLs and:
+//  ① Replaces the real URL with a runtime-bound decoder
+//     Key = (game.PlaceId % 256 + fixed_K) makes it
+//     impossible to decode outside of Roblox.
+//  ② Injects N fake webhook decoys as junk locals
+//     so static extractors get flooded with fakes.
+// ══════════════════════════════════════════════
+function passAutoWebhook(src) {
+  const webhookRe = /https:\/\/discord(?:app)?\.com\/api\/webhooks\/\d+\/[\w\-]+/g;
+  const found = [...new Set(src.match(webhookRe) || [])];
+  if (!found.length) return src;
+
+  // Build per-URL protect code
+  let injectHeader = '';
+  const replacements = new Map();
+
+  for (const url of found) {
+    const bytes = strToUTF8(url);
+    const fixedK = (Math.random()*180|0) + 20;
+    const M = ROLL_MULS[Math.random()*ROLL_MULS.length|0];
+
+    // Encode: key = (PlaceId%256 + fixedK) mod 256, then rolling XOR
+    // JS side: we pre-XOR with fixedK only (PlaceId unknown at encode time)
+    // Lua side: key = (game.PlaceId % 256 + fixedK) % 256 then roll
+    const enc = [];
+    let k = fixedK;
+    for (let i = 0; i < bytes.length; i++) {
+      enc.push((bytes[i] ^ k) & 0xFF);
+      k = (k * M + (i + 3)) % 256;
+    }
+
+    const [vK, vM, vN, vB, vI, vR, vFn] = Array.from({length:7}, mkSN);
+
+    // Lua function that requires game.PlaceId to decode
+    // Without Roblox running, game.PlaceId is nil → decode fails → URL hidden
+    const fn =
+      `local ${vFn}=function()
+` +
+      `local ${vK}=(game.PlaceId%256+${fixedK})%256
+` +
+      `local ${vM},${vN},${vR}=${M},{${enc.join(',')}},{}
+` +
+      `for ${vI}=1,#${vN} do
+` +
+      `${vR}[${vI}]=string.char(${vN}[${vI}]==0 and 0 or (${vN}[${vI}]+256-${vK}%256)%256)
+` +
+      `${vK}=(${vK}*${vM}+(${vI}+2))%256
+` +
+      `end
+` +
+      `return table.concat(${vR})
+` +
+      `end
+`;
+
+    // Generate fake decoy webhooks
+    const fakeCount = (Math.random()*8|0)+5;
+    let fakes = '';
+    for (let f = 0; f < fakeCount; f++) {
+      const fid = String(Math.floor(Math.random()*9e17+1e17));
+      const ftok = Array.from({length:68}, () => {
+        const c = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-';
+        return c[Math.random()*c.length|0];
+      }).join('');
+      const fv = mkSN();
+      fakes += `local ${fv}="https://discord.com/api/webhooks/${fid}/${ftok}"
+`;
+    }
+
+    injectHeader += fakes + fn;
+    replacements.set(url, `${vFn}()`);
+  }
+
+  // Replace URLs in source
+  let result = src;
+  for (const [url, replacement] of replacements) {
+    result = result.split(url).join(replacement);
+  }
+
+  return injectHeader + result;
+}
+
+
+// ══════════════════════════════════════════════
 //  PASS: VM WRAPPER — Luraph-style
 //
 //  Features:
@@ -1146,6 +1235,15 @@ function runObf() {
       decoderLua = mkDS(dsVar);
       str = decoderLua + apiHeader + str;
       lg('✓ Rolling XOR decoder injected', 'ok');
+    }
+
+    // Auto webhook protection (before VM so URL is inside encrypted payload)
+    if (isOn('t-wha')) {
+      const whCount = (src.match(/https:\/\/discord(?:app)?\.com\/api\/webhooks\/\d+\/[\w\-]+/g)||[]).length;
+      if (whCount > 0) {
+        str = passAutoWebhook(str);
+        lg(`✓ ${whCount} webhook(s) protected (PlaceId-bound key + fake decoys)`, 'ok');
+      }
     }
 
     // VM wrap: base-85 encoding
