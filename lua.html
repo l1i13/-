@@ -488,68 +488,15 @@ textarea::placeholder { color: var(--dim); }
 
 
 
-  <div class="warn-banner">
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 2L2 13h12L8 2z"/><path d="M8 6v4M8 11v1"/></svg>
-    <div>For best results, enable <strong>Inject Protection</strong> in the obfuscator — it automatically handles this step and encrypts the protection code inside the VM.</div>
-  </div>
-
-  <div class="prot-grid">
-    <div class="section">
-      <div class="section-title">Protection Modules</div>
-      <div style="margin-top:4px">
-        <div class="toggle-row">
-          <div class="toggle-info">
-            <div class="toggle-label">Anti-Hook</div>
-            <div class="toggle-desc">Detect hookfunction, replaceclosure, clonefunction</div>
-          </div>
-          <div class="sw on" id="p-ahook" onclick="this.classList.toggle('on')"></div>
-        </div>
-        <div class="toggle-row">
-          <div class="toggle-info">
-            <div class="toggle-label">Anti-HTTP Spy</div>
-            <div class="toggle-desc">Detect known exploit HTTP interception frameworks</div>
-          </div>
-          <div class="sw on" id="p-ahttp" onclick="this.classList.toggle('on')"></div>
-        </div>
-        <div class="toggle-row">
-          <div class="toggle-info">
-            <div class="toggle-label">Anti-ENV Logger</div>
-            <div class="toggle-desc">5-layer cross-validation of function return values</div>
-          </div>
-          <div class="sw on" id="p-aenv" onclick="this.classList.toggle('on')"></div>
-        </div>
-        <div class="toggle-row">
-          <div class="toggle-info">
-            <div class="toggle-label">Anti-Deobf Crash</div>
-            <div class="toggle-desc">Inject parser-crashing patterns into deobfuscators</div>
-          </div>
-          <div class="sw" id="p-acrsh" onclick="this.classList.toggle('on')"></div>
-        </div>
-        <div class="toggle-row">
-          <div class="toggle-info">
-            <div class="toggle-label">Auto Webhook Protect</div>
-            <div class="toggle-desc">Scan source and protect all webhook URLs</div>
-          </div>
-          <div class="sw on" id="p-awh" onclick="this.classList.toggle('on')"></div>
-        </div>
-      </div>
-      <div class="field" style="margin-top:16px">
-        <label>Detection Behavior</label>
-        <select id="p-action">
-          <option value="return">Silent exit (return)</option>
-          <option value="error">Throw error</option>
-          <option value="loop">Infinite loop (freeze)</option>
-        </select>
-      </div>
-      <div class="flex-row" style="margin-top:4px">
-        <button class="btn-sm btn-gold" onclick="runProtInject()">Preview Code</button>
-        <button class="btn-sm btn-ghost" onclick="copyProtCode()">Copy</button>
-      </div>
-    </div>
-    <div class="section">
-      <div class="section-title">Preview</div>
-      <div class="wh-out" id="prot-out" style="min-height:400px">-- Click "Preview Code" to generate...</div>
-    </div>
+  <!-- Protection always-on hidden elements -->
+  <div style="display:none">
+    <div class="sw on" id="p-ahook"></div>
+    <div class="sw on" id="p-ahttp"></div>
+    <div class="sw on" id="p-aenv"></div>
+    <div class="sw" id="p-acrsh"></div>
+    <div class="sw on" id="p-awh"></div>
+    <select id="p-action"><option value="return" selected>return</option></select>
+    <div id="prot-out"></div>
   </div>
 </div>
 
