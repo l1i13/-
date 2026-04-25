@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LuaShield v35 — Roblox Lua Obfuscator</title>
+<title>LuaShield v36 — Roblox Lua Obfuscator</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&family=Syne:wght@700;800&display=swap');
 :root{
@@ -107,7 +107,7 @@ h1{animation:glitch 7s infinite}
     <h1>LUASHIELD</h1>
     <div class="head-sub">Roblox Lua Obfuscation Engine<span class="cur">_</span></div>
   </div>
-  <div class="badge">v35.0 — LURAPH ENGINE</div>
+  <div class="badge">v36.0 — LURAPH ENGINE</div>
 </header>
 
 <div class="tabs">
@@ -656,7 +656,12 @@ function passRename(toks) {
     }
   }
   const map = new Map();
-  for (const n of locals) map.set(n, mkN());
+  for (const n of locals) {
+    // Skip _ prefix vars: cross-closure shared state (e.g. _upActive, _upByB)
+    // Renaming these breaks upvalue sharing between Heartbeat/InputBegan/functions
+    if (n.startsWith('_')) continue;
+    map.set(n, mkN());
+  }
   const res = [];
   for (let i = 0; i < toks.length; i++) {
     const t = toks[i];
