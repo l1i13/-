@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LuaShield v36 — Roblox Lua Obfuscator</title>
+<title>LuaShield v37 — Roblox Lua Obfuscator</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&family=Syne:wght@700;800&display=swap');
 :root{
@@ -107,7 +107,7 @@ h1{animation:glitch 7s infinite}
     <h1>LUASHIELD</h1>
     <div class="head-sub">Roblox Lua Obfuscation Engine<span class="cur">_</span></div>
   </div>
-  <div class="badge">v36.0 — LURAPH ENGINE</div>
+  <div class="badge">v37.0 — LURAPH ENGINE</div>
 </header>
 
 <div class="tabs">
@@ -1144,12 +1144,51 @@ function passVM(src) {
     `do if typeof then local ${vN8}=typeof(Vector3.new());if ${vN8}~="Vector3" then ${vSkip}=${vSkip}+${NF} end end end;` +
     `do if game then local ${vN1}=type(game);if ${vN1}~="userdata" then ${vSkip}=${vSkip}+${NG} end end end;`;
 
-  // ── Dead code blocks (confuse deobfuscators) ──
+  // ── Massive dead code / junk injection ──
+  // Generates megabytes of realistic-looking but useless Lua code
+  // injected INSIDE the VM decoder (always encrypted, hard to remove)
+  const junkLines = [];
+  const junkNames  = Array.from({length:120}, mkSN);
+  const junkStrs   = ['service','player','value','result','data','config',
+    'handle','state','timer','index','cache','frame','mode','flag'];
+  const junkMath   = () => {
+    const a = (Math.random()*999|0)+1, b = (Math.random()*999|0)+1;
+    const ops = ['+','-','*'];
+    return `${a}${ops[Math.random()*ops.length|0]}${b}`;
+  };
+  const junkStr = () => {
+    const s = junkStrs[Math.random()*junkStrs.length|0];
+    const n = (Math.random()*999|0)+1;
+    return `"${s}_${n}"`;
+  };
+
+  // Generate 8000 lines of junk (produces ~400KB+ of Lua)
+  for (let j = 0; j < 8000; j++) {
+    const v = junkNames[j % junkNames.length];
+    const v2 = junkNames[(j+7) % junkNames.length];
+    const kind = j % 12;
+    switch(kind) {
+      case 0:  junkLines.push(`local ${v}=math.floor(${junkMath()})`); break;
+      case 1:  junkLines.push(`local ${v}=tostring(${junkMath()})`); break;
+      case 2:  junkLines.push(`local ${v}=${junkStr()}`); break;
+      case 3:  junkLines.push(`local ${v}=string.len(${junkStr()})`); break;
+      case 4:  junkLines.push(`local ${v}=string.rep(${junkStr()},${(Math.random()*3|0)+1})`); break;
+      case 5:  junkLines.push(`local ${v}=math.max(${junkMath()},${junkMath()})`); break;
+      case 6:  junkLines.push(`local ${v}={${Array.from({length:8},()=>Math.random()*255|0).join(',')}}`); break;
+      case 7:  junkLines.push(`local ${v}=string.char(${Array.from({length:6},()=>Math.random()*90|0+33).join(',')})`); break;
+      case 8:  junkLines.push(`local ${v}=type(${junkStr()})`); break;
+      case 9:  junkLines.push(`local ${v}=select("#",${Array.from({length:4},()=>Math.random()*99|0).join(',')})`); break;
+      case 10: junkLines.push(`if(${junkMath()})==(${junkMath()})then local ${v}=${junkMath()} end`); break;
+      case 11: junkLines.push(`do local ${v}=${junkMath()} ${v}=${v}+0 local ${v2}=${v}*1 end`); break;
+    }
+  }
+
   const dead =
-    `local ${vD1}=math.floor(0) ` +
-    `local ${vD2}=string.rep("",0) ` +
-    `local ${vD3}=select("#") ` +
-    `local ${vD4}={} `;
+    junkLines.join(';') + ';' +
+    `local ${vD1}=math.floor(0);` +
+    `local ${vD2}=string.rep("",0);` +
+    `local ${vD3}=select("#");` +
+    `local ${vD4}={};`;
 
   // ── Base-85 decoder ──
   const decoder =
