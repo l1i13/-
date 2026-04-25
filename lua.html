@@ -2870,7 +2870,7 @@ function openApiModal(docId) {
   document.getElementById('api-name').value = '';
 
   const sel = document.getElementById('api-active');
-  sel.innerHTML = '<option value="true">Active</option><option value="false">Inactive</option>';
+  sel.innerHTML = '<option value="true">Active — accepts requests</option><option value="false">Inactive — blocks all requests</option>';
   sel.value = 'true';
 
   if (docId) {
@@ -3125,8 +3125,8 @@ async function deleteApi(docId) {
       <div class="api-field">
         <label>STATUS</label>
         <select id="api-active">
-          <option value="true" selected>Active</option>
-          <option value="false">Inactive</option>
+          <option value="true" selected>Active — accepts requests</option>
+          <option value="false">Inactive — blocks all requests</option>
         </select>
       </div>
     </div>
