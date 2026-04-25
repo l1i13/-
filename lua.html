@@ -741,18 +741,18 @@ textarea::placeholder { color: var(--dim); }
   <!-- Source input -->
   <div class="section">
     <div class="upload-tabs">
-      <div class="utab" id="ut-file" onclick="setUploadTab('file')">
+      <div class="utab active" id="ut-file" onclick="setUploadTab('file')">
         <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 12V4l4-3h6v11H2z"/><path d="M6 1v3H2"/></svg>
         Upload File
       </div>
-      <div class="utab active" id="ut-paste" onclick="setUploadTab('paste')">
+      <div class="utab" id="ut-paste" onclick="setUploadTab('paste')">
         <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="2" width="8" height="10" rx="1"/><path d="M5 5h4M5 7h4M5 9h2"/></svg>
         Paste Code
       </div>
     </div>
 
     <!-- Drop zone (file mode) -->
-    <div class="drop-zone" id="drop" style="display:none">
+    <div class="drop-zone" id="drop">
       <div class="drop-icon">
         <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 14V4M6 8l4-4 4 4"/><path d="M4 16h12"/></svg>
       </div>
@@ -762,7 +762,7 @@ textarea::placeholder { color: var(--dim); }
     </div>
 
     <!-- Paste mode -->
-    <div class="code-area active" id="paste-area">
+    <div class="code-area" id="paste-area">
       <textarea id="src" placeholder="-- Paste your Lua source code here...&#10;&#10;print(&quot;Hello, World!&quot;)"></textarea>
     </div>
   </div>
@@ -2863,38 +2863,30 @@ function _renderApiItems(apis) {
 
 let _editingApiId = null;
 
-async function openApiModal(docId) {
+function openApiModal(docId) {
   _editingApiId = docId;
   document.getElementById('api-modal-title').textContent = docId ? 'Edit API' : 'Create API';
   document.getElementById('api-script').value = '';
   document.getElementById('api-name').value = '';
-  document.getElementById('api-active').value = 'true';
-  // Update status select options based on mode
+
   const sel = document.getElementById('api-active');
-  if (!docId) {
-    sel.innerHTML = '<option value="true">Creating API...</option><option value="false">Inactive — blocks all requests</option>';
-    sel.value = 'true';
-  } else {
-    sel.innerHTML = '<option value="true">Active — accepts requests</option><option value="false">Inactive — blocks all requests</option>';
-  }
+  sel.innerHTML = '<option value="true">Active</option><option value="false">Inactive</option>';
+  sel.value = 'true';
 
   if (docId) {
-    try {
-      const doc = await getApiCollection().doc(docId).get();
-      const a = doc.data();
+    // Load from cache instantly — no Firestore delay
+    const a = getApiCache().find(x => x.id === docId);
+    if (a) {
       document.getElementById('api-name').value = a.name || '';
       document.getElementById('api-script').value = a.script || '';
-      const selEl = document.getElementById('api-active');
-      selEl.innerHTML = '<option value="true">Active — accepts requests</option><option value="false">Inactive — blocks all requests</option>';
-      selEl.value = a.active ? 'true' : 'false';
-      // Show URL and key for existing
+      sel.value = a.active ? 'true' : 'false';
       const endpoint = `${WORKER_URL}/${a.id}?key=${a.key}`;
       document.getElementById('api-url-display').textContent = endpoint;
       document.getElementById('api-url-hint').textContent = endpoint;
       document.getElementById('api-key-display').value = a.key;
       document.getElementById('api-url-field').style.display = '';
       document.getElementById('api-key-field').style.display = '';
-    } catch(e) { showToast('Failed to load API data'); return; }
+    }
   } else {
     document.getElementById('api-url-field').style.display = 'none';
     document.getElementById('api-key-field').style.display = 'none';
@@ -3133,8 +3125,8 @@ async function deleteApi(docId) {
       <div class="api-field">
         <label>STATUS</label>
         <select id="api-active">
-          <option value="true">Active — accepts requests</option>
-          <option value="false">Inactive — blocks all requests</option>
+          <option value="true" selected>Active</option>
+          <option value="false">Inactive</option>
         </select>
       </div>
     </div>
