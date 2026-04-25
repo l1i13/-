@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LuaShield v38 — Roblox Lua Obfuscator</title>
+<title>LuaShield v39 — Roblox Lua Obfuscator</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&family=Syne:wght@700;800&display=swap');
 :root{
@@ -107,7 +107,7 @@ h1{animation:glitch 7s infinite}
     <h1>LUASHIELD</h1>
     <div class="head-sub">Roblox Lua Obfuscation Engine<span class="cur">_</span></div>
   </div>
-  <div class="badge">v38.0 — LURAPH ENGINE</div>
+  <div class="badge">v39.0 — LURAPH ENGINE</div>
 </header>
 
 <div class="tabs">
@@ -1031,41 +1031,23 @@ function passAutoWebhook(src) {
 
 
 // ══════════════════════════════════════════════
-//  PASS: VM WRAPPER — v31 Ultra
+//  PASS: VM WRAPPER — v38 Stable
 //
-//  Encoding:
-//    ① UTF-8 source → rolling XOR pre-scramble
-//    ② XOR bytes → base-85 encoded string
-//    ③ Payload split into 5 segments (not 3)
-//       concatenated at runtime → anti-literal
-//  Decoder:
-//    ④ 5-segment concat → strip SIG → expand z
-//    ⑤ Memoised __index table for 5-char groups
-//    ⑥ XOR descramble pass after base-85 decode
-//  Protection:
-//    ⑦ 8-check anti-tamper (skip-offset corruption)
-//    ⑧ Anti-dump: nil payload + decoded string ASAP
-//    ⑨ Random dead-code blocks between setup lines
+//  Encoding: UTF-8 → base-85 (reliable, no XOR issues)
+//  Payload: split into 5 random segments (anti-literal)
+//  Protection: 15-check anti-tamper (skip-offset corrupt)
+//  Anti-dump: nil payload + decoded string after load
+//  Junk: 1500 lines of dead code (encrypted inside VM)
 // ══════════════════════════════════════════════
 function passVM(src) {
-  const SIG   = rh(6).toUpperCase();
-  const skip  = SIG.length + 1; // = 7
+  const SIG  = rh(6).toUpperCase();
+  const skip = SIG.length + 1; // = 7
 
-  // ── Pre-scramble: rolling XOR before base-85 ──
-  // Adds a second encoding layer — base-85 decode alone gives XOR garbage
+  // ── Base-85 encode (UTF-8 bytes, no pre-scramble) ──
   const srcBytes = strToUTF8(src);
-  const XK = (Math.random()*200|0) + 20;  // XOR pre-scramble key
-  const XM = ROLL_MULS[Math.random()*ROLL_MULS.length|0];
-  const scrambled = [];
-  let xk = XK;
-  for (let i = 0; i < srcBytes.length; i++) {
-    scrambled.push((srcBytes[i] ^ xk) & 0xFF);
-    xk = (xk * XM + (i + 5)) % 256;
-  }
-
-  // ── Base-85 encode scrambled bytes ──
-  const padded = [...scrambled];
+  const padded   = [...srcBytes];
   while (padded.length % 4 !== 0) padded.push(32);
+
   let b85 = '';
   for (let i = 0; i < padded.length; i += 4) {
     const L = padded[i] + padded[i+1]*256 + padded[i+2]*65536 + padded[i+3]*16777216;
@@ -1081,19 +1063,17 @@ function passVM(src) {
 
   const fullPayload = SIG + b85;
 
-  // ── Split into 5 segments (anti-literal-extraction) ──
-  const cuts = [0];
-  // Random cut points between 15%-85% of length, sorted
-  while (cuts.length < 5) {
-    const c = Math.floor(Math.random() * fullPayload.length * 0.7 + fullPayload.length * 0.15);
+  // ── Split into 5 segments ──
+  const pLen = fullPayload.length;
+  const cuts = [0, pLen];
+  while (cuts.length < 6) {
+    const c = (Math.random() * pLen * 0.6 + pLen * 0.2) | 0;
     if (!cuts.includes(c)) cuts.push(c);
   }
-  cuts.push(fullPayload.length);
-  cuts.sort((a,b) => a-b);
+  cuts.sort((a,b)=>a-b);
   const segs = [];
   for (let i = 0; i < 5; i++) segs.push(fullPayload.slice(cuts[i], cuts[i+1]));
 
-  // Safe bracket level per segment
   const safeBracket = s => {
     let n = 2; while (s.includes(']'+'='.repeat(n)+']')) n++; return n;
   };
@@ -1101,29 +1081,52 @@ function passVM(src) {
   const LS = i => '[' + '='.repeat(brackets[i]) + '[';
   const LE = i => ']' + '='.repeat(brackets[i]) + ']';
 
-  // ── Variable names (all mkSN — collision-safe) ──
-  const V = () => mkSN();
+  // ── Variable names ──
+  const V = mkSN;
   const vChr=V(),vPcall=V(),vByte=V(),vUnpk=V(),vSkip=V(),vChrTbl=V(),vSetmt=V(),vAssrt=V();
   const vPack=V(),vGsub=V(),vSub=V(),vLoad=V();
-  const vSeg=V(),vRaw=V(),vDecode=V(),vDecTbl=V(),vStr=V(),vFn=V(),vErr=V(),vOk=V();
-  const vXK=V(),vXM=V(),vXI=V(),vXB=V(),vXR=V();
+  const vSeg=V(),vDecode=V(),vDecTbl=V(),vStr=V(),vFn=V(),vErr=V(),vOk=V();
   const vN1=V(),vN2=V(),vN3=V(),vN4=V(),vN5=V(),vN6=V(),vN7=V(),vN8=V();
-  // Dead-code variable names
   const vD1=V(),vD2=V(),vD3=V(),vD4=V();
   const sig = rh(14).toUpperCase();
 
-  // ── Anti-tamper: 8 checks, corrupt skip on fail ──
+  // ── 1500-line junk (dead code, encrypted inside VM) ──
+  const junkLines = [];
+  const junkNames = Array.from({length:120}, mkSN);
+  const junkStrs  = ['service','player','value','result','data','config',
+    'handle','state','timer','index','cache','frame','mode','flag'];
+  const junkMath  = () => {
+    const a = (Math.random()*899|0)+100;
+    const b = (Math.random()*(a-1)|0)+1;
+    return Math.random()>0.5 ? `${a}+${b}` : `${a}-${b}`;
+  };
+  const junkStr = () => {
+    const s = junkStrs[Math.random()*junkStrs.length|0];
+    return `"${s}_${(Math.random()*999|0)+1}"`;
+  };
+  for (let j = 0; j < 1500; j++) {
+    const v = junkNames[j % junkNames.length];
+    switch(j % 10) {
+      case 0: junkLines.push(`local ${v}=math.floor(${junkMath()})`); break;
+      case 1: junkLines.push(`local ${v}=tostring(${junkMath()})`); break;
+      case 2: junkLines.push(`local ${v}=${junkStr()}`); break;
+      case 3: junkLines.push(`local ${v}=string.len(${junkStr()})`); break;
+      case 4: junkLines.push(`local ${v}=string.rep(${junkStr()},2)`); break;
+      case 5: junkLines.push(`local ${v}=math.max(${junkMath()},${junkMath()})`); break;
+      case 6: junkLines.push(`local ${v}={${Array.from({length:6},()=>Math.random()*255|0).join(',')}}`); break;
+      case 7: junkLines.push(`local ${v}=string.char(${Array.from({length:4},()=>Math.random()*89|0+33).join(',')})`); break;
+      case 8: junkLines.push(`local ${v}=math.abs(${junkMath()})`); break;
+      case 9: junkLines.push(`local ${v}=math.floor(${junkMath()}+0.5)`); break;
+    }
+  }
+
+  // ── Anti-tamper: 15 checks, corrupt skip on fail ──
   const NA=(Math.random()*150|0)+30, NB=(Math.random()*200|0)+50,
         NC=(Math.random()*170|0)+40, ND=(Math.random()*220|0)+60,
         NE=(Math.random()*160|0)+35, NF=(Math.random()*190|0)+45,
         NG=(Math.random()*175|0)+55, NH=(Math.random()*210|0)+65;
 
-  // ── Anti-Tamper + Anti-ENV Logger ──
-  // Strategy: corrupt vSkip → wrong SIG strip → b85 decode gets garbage
-  // → loadstring gets garbage → fails silently (no output to deobf tool)
-  // All checks are Roblox-verified safe (no debug lib, no function identity)
   const checks =
-    // Layer 1: Basic Lua invariants
     `do local ${vN1}=math.abs(-9);if ${vN1}~=9 then ${vSkip}=${vSkip}+${NA} end end;` +
     `do local ${vN2}=type("x");if ${vN2}~="string" then ${vSkip}=${vSkip}+${NB} end end;` +
     `do local ${vN3}=select("#",1,2,3,4);if ${vN3}~=4 then ${vSkip}=${vSkip}+${NC} end end;` +
@@ -1132,66 +1135,15 @@ function passVM(src) {
     `do local ${vN6}=string.byte("M",1);if ${vN6}~=77 then ${vSkip}=${vSkip}+${NF} end end;` +
     `do local ${vN7}=string.char(88);if ${vN7}~="X" then ${vSkip}=${vSkip}+${NG} end end;` +
     `do local ${vN8},${vN1}=pcall(math.abs,-3);if not ${vN8} or ${vN1}~=3 then ${vSkip}=${vSkip}+${NH} end end;` +
-    // Layer 2: Anti-ENV Logger — verify return values not just function existence
-    // ENV loggers must return correct values but slip up on exact numeric results
     `do local ${vN2}=math.floor(3.9);if ${vN2}~=3 then ${vSkip}=${vSkip}+${NA} end end;` +
     `do local ${vN3}=math.floor(math.pi*1e4);if ${vN3}~=31415 then ${vSkip}=${vSkip}+${NB} end end;` +
     `do local ${vN4}=string.len("LuaShield");if ${vN4}~=9 then ${vSkip}=${vSkip}+${NC} end end;` +
     `do local ${vN5}=table.concat({"a","b","c"});if ${vN5}~="abc" then ${vSkip}=${vSkip}+${ND} end end;` +
     `do local ${vN6},${vN7}=string.gsub("xxxx","x","y");if ${vN6}~="yyyy" or ${vN7}~=4 then ${vSkip}=${vSkip}+${NE} end end;` +
-    // Layer 3: Anti-Deobf — verify Roblox-specific environment signals
-    // Fake envs don't have 'game' as userdata or return wrong typeof
     `do if typeof then local ${vN8}=typeof(Vector3.new());if ${vN8}~="Vector3" then ${vSkip}=${vSkip}+${NF} end end end;` +
     `do if game then local ${vN1}=type(game);if ${vN1}~="userdata" then ${vSkip}=${vSkip}+${NG} end end end;`;
 
-  // ── Massive dead code / junk injection ──
-  // Generates megabytes of realistic-looking but useless Lua code
-  // injected INSIDE the VM decoder (always encrypted, hard to remove)
-  const junkLines = [];
-  const junkNames  = Array.from({length:120}, mkSN);
-  const junkStrs   = ['service','player','value','result','data','config',
-    'handle','state','timer','index','cache','frame','mode','flag'];
-  const junkMath   = () => {
-    const a = (Math.random()*999|0)+100;
-    const b = (Math.random()*(a-1)|0)+1; // b < a so subtraction always positive
-    const ops = ['+','-'];
-    return `${a}${ops[Math.random()*ops.length|0]}${b}`;
-  };
-  const junkStr = () => {
-    const s = junkStrs[Math.random()*junkStrs.length|0];
-    const n = (Math.random()*999|0)+1;
-    return `"${s}_${n}"`;
-  };
-
-  // Generate 1500 lines of junk (safe within Roblox source limit ~75KB)
-  for (let j = 0; j < 1500; j++) {
-    const v = junkNames[j % junkNames.length];
-    const v2 = junkNames[(j+7) % junkNames.length];
-    const kind = j % 12;
-    switch(kind) {
-      case 0:  junkLines.push(`local ${v}=math.floor(${junkMath()})`); break;
-      case 1:  junkLines.push(`local ${v}=tostring(${junkMath()})`); break;
-      case 2:  junkLines.push(`local ${v}=${junkStr()}`); break;
-      case 3:  junkLines.push(`local ${v}=string.len(${junkStr()})`); break;
-      case 4:  junkLines.push(`local ${v}=string.rep(${junkStr()},${(Math.random()*3|0)+1})`); break;
-      case 5:  junkLines.push(`local ${v}=math.max(${junkMath()},${junkMath()})`); break;
-      case 6:  junkLines.push(`local ${v}={${Array.from({length:8},()=>Math.random()*255|0).join(',')}}`); break;
-      case 7:  junkLines.push(`local ${v}=string.char(${Array.from({length:6},()=>Math.random()*90|0+33).join(',')})`); break;
-      case 8:  junkLines.push(`local ${v}=type(${junkStr()})`); break;
-      case 9:  junkLines.push(`local ${v}=math.floor(${junkMath()}+0.5)`); break;
-      case 10: junkLines.push(`local ${v}=math.min(${junkMath()},${junkMath()})`); break;
-      case 11: junkLines.push(`local ${v}=math.abs(${junkMath()})`); break;
-    }
-  }
-
-  const dead =
-    junkLines.join(';') + ';' +
-    `local ${vD1}=math.floor(0);` +
-    `local ${vD2}=string.rep("",0);` +
-    `local ${vD3}=select("#");` +
-    `local ${vD4}={};`;
-
-  // ── Base-85 decoder ──
+  // ── Decoder ──
   const decoder =
     `local ${vDecode}=function(${vStr})` +
     `${vStr}=${vSub}(${vStr},${vSkip});` +
@@ -1202,45 +1154,20 @@ function passVM(src) {
     `d=${vPack}("<I4",L);${vDecTbl}[_]=d;return d;` +
     `end})) end;`;
 
-  // ── XOR descramble pass (second decoding layer) ──
-  // XOR is self-inverse: encode = byte^k, decode = enc^k (same op)
-  // Lua key evolution: k=(k*XM+(i+4))%256 where i is 1-based
-  // matches JS: k=(k*XM+(i+5))%256 where i is 0-based (i+5 = (i+1)+4)
-  const vBxFn = mkSN();
-  const descramble =
-    // Pure-math XOR (no bit32 needed)
-    `local ${vBxFn}=bit32 and bit32.bxor or function(a,b)` +
-    `local s,v=1,0 while a>0 or b>0 do ` +
-    `local ra,rb=a%2,b%2 if ra~=rb then v=v+s end ` +
-    `a,b,s=(a-ra)/2,(b-rb)/2,s*2 end return v end;` +
-    `local ${vXK},${vXM}=${XK},${XM};` +
-    `local ${vXR}={};` +
-    `for ${vXI}=1,#${vRaw} do ` +
-    `local ${vXB}=string.byte(${vRaw},${vXI});` +
-    `${vXR}[${vXI}]=string.char(${vBxFn}(${vXB},${vXK}%256));` +
-    `${vXK}=(${vXK}*${vXM}+(${vXI}+4))%256 ` +
-    `end ` +
-    `${vStr}=table.concat(${vXR});` +
-    `${vXR}=nil;${vRaw}=nil;`;
-
-  // ── Execute with anti-dump ──
+  // ── Execute (anti-dump) ──
   const execute =
-    // Concat 5 segments at runtime
-    `local ${vSeg}=` +
-    segs.map((s, i) => `${LS(i)}${s}${LE(i)}`).join('..') + `;` +
-    // Decode base-85
-    `local ${vRaw}=${vDecode}(${vSeg});` +
-    `${vSeg}=nil;` +           // anti-dump: wipe raw b85
-    // Descramble XOR
-    descramble +
-    // Load
+    `local ${vSeg}=${segs.map((s,i)=>`${LS(i)}${s}${LE(i)}`).join('..')};` +
+    `local ${vStr}=${vDecode}(${vSeg});` +
+    `${vSeg}=nil;` +
     `local ${vFn},${vErr}=${vLoad}(${vStr});` +
-    `${vStr}=nil;` +           // anti-dump: wipe decoded source
+    `${vStr}=nil;` +
     `if not ${vFn} then error(tostring(${vErr})) end;` +
     `local ${vOk},${vErr}=${vPcall}(${vFn});` +
     `if not ${vOk} then error(tostring(${vErr})) end;`;
 
-  // ── Assemble ──
+  const dead = junkLines.join(';') + ';' +
+    `local ${vD1}=0;local ${vD2}="";local ${vD3}=0;local ${vD4}={};`;
+
   return (
     `--[[${sig}]]` +
     `return(function()` +
