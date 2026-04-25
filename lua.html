@@ -329,14 +329,7 @@ textarea::placeholder { color: var(--dim); }
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg>
       Upload
     </a>
-    <a class="nav-link" onclick="showPage('wh',this)">
-      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 5.5c0 4-3 6.5-5 7-2-.5-5-3-5-7V3.5l5-2 5 2V5.5z"/></svg>
-      Webhook
-    </a>
-    <a class="nav-link" onclick="showPage('prot',this)">
-      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="8" cy="8" r="6"/><path d="M5 8l2 2 4-4"/></svg>
-      Protection
-    </a>
+
   </div>
 </nav>
 
@@ -403,23 +396,19 @@ textarea::placeholder { color: var(--dim); }
       </div>
     </div>
 
-    <!-- Features -->
-    <div class="features-row">
+    <!-- All features always included -->
+    <div class="features-row" style="margin-top:16px">
       <div class="feature-chip">
         <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 7l3 3 7-7"/></svg>
         Base-85 VM
       </div>
       <div class="feature-chip">
         <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 7l3 3 7-7"/></svg>
-        Anti-Tamper (15 layers)
+        Anti-Tamper
       </div>
       <div class="feature-chip">
         <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 7l3 3 7-7"/></svg>
-        Junk Code Injection
-      </div>
-      <div class="feature-chip">
-        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 7l3 3 7-7"/></svg>
-        Anti-Dump
+        Anti-Hook
       </div>
       <div class="feature-chip">
         <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 7l3 3 7-7"/></svg>
@@ -430,46 +419,23 @@ textarea::placeholder { color: var(--dim); }
         Minified Identifiers
       </div>
     </div>
+
   </div>
 
-  <!-- Options -->
-  <div class="section">
-    <div class="section-title">Options</div>
-    <div style="margin-top:4px">
-      <div class="toggle-row">
-        <div class="toggle-info">
-          <div class="toggle-label">Strip Comments</div>
-          <div class="toggle-desc">Remove all comments from the source code</div>
-        </div>
-        <div class="sw on" id="t-com" onclick="this.classList.toggle('on')"></div>
-      </div>
-      <div class="toggle-row">
-        <div class="toggle-info">
-          <div class="toggle-label">VM Wrap</div>
-          <div class="toggle-desc">Encrypt source in base-85 virtual machine</div>
-        </div>
-        <div class="sw on" id="t-vm" onclick="this.classList.toggle('on')"></div>
-      </div>
-      <div class="toggle-row">
-        <div class="toggle-info">
-          <div class="toggle-label">Auto Webhook Protection</div>
-          <div class="toggle-desc">Auto-detect and protect Discord webhook URLs with 1000 decoys</div>
-        </div>
-        <div class="sw on" id="t-wha" onclick="this.classList.toggle('on')"></div>
-      </div>
-      <div class="toggle-row">
-        <div class="toggle-info">
-          <div class="toggle-label">Inject Protection</div>
-          <div class="toggle-desc">Auto-inject anti-hook, anti-env-logger, and anti-http-spy code</div>
-        </div>
-        <div class="sw on" id="t-prot" onclick="this.classList.toggle('on')"></div>
-      </div>
-    </div>
-    <!-- hidden compat toggles -->
-    <div style="display:none">
-      <div id="t-api"></div><div id="t-str"></div>
-      <div id="t-num"></div><div id="t-var"></div><div id="t-jnk"></div>
-    </div>
+  <!-- All options always on - hidden compat toggles -->
+  <div style="display:none">
+    <div class="sw on" id="t-com"></div>
+    <div class="sw on" id="t-vm"></div>
+    <div class="sw on" id="t-wha"></div>
+    <div class="sw on" id="t-prot"></div>
+    <div id="t-api"></div><div id="t-str"></div>
+    <div id="t-num"></div><div id="t-var"></div><div id="t-jnk"></div>
+    <div class="sw on" id="p-ahook"></div>
+    <div class="sw on" id="p-ahttp"></div>
+    <div class="sw on" id="p-aenv"></div>
+    <div class="sw" id="p-acrsh"></div>
+    <div class="sw on" id="p-awh"></div>
+    <select id="p-action"><option value="return" selected>return</option></select>
   </div>
 
   <!-- Obfuscate button -->
@@ -520,56 +486,7 @@ textarea::placeholder { color: var(--dim); }
   </div>
 </div>
 
-<!-- ═══ WEBHOOK PAGE ═══ -->
-<div class="page" id="pg-wh" style="display:none">
-  <div class="page-title">Webhook Protection</div>
-  <div class="page-sub">Protect your Discord webhooks from being extracted by exploiters</div>
 
-  <div class="warn-banner">
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 2L2 13h12L8 2z"/><path d="M8 6v4M8 11v1"/></svg>
-    <div>Real URL is XOR-encoded and bound to <strong>game.PlaceId</strong> — cannot be decoded outside Roblox. 1000 fake decoy webhooks are injected as noise.</div>
-  </div>
-
-  <div class="wh-grid">
-    <div class="section">
-      <div class="section-title">Configuration</div>
-      <div class="field">
-        <label>Real Webhook URL</label>
-        <input type="text" id="wh-real" placeholder="https://discord.com/api/webhooks/...">
-      </div>
-      <div class="field">
-        <label>Decoy Count</label>
-        <select id="wh-count">
-          <option value="40">40 decoys</option>
-          <option value="150">150 decoys</option>
-          <option value="500">500 decoys</option>
-          <option value="1000" selected>1000 decoys</option>
-        </select>
-      </div>
-      <div class="field">
-        <label>XOR Key Strength</label>
-        <select id="wh-ks">
-          <option value="single">Single layer XOR</option>
-          <option value="double" selected>Double layer XOR</option>
-          <option value="triple">Triple layer XOR</option>
-        </select>
-      </div>
-      <div class="flex-row" style="margin-top:8px">
-        <button class="btn-sm btn-gold" onclick="whGenerate()">Generate</button>
-        <button class="btn-sm btn-ghost" onclick="whCopy()">Copy</button>
-      </div>
-    </div>
-    <div class="section">
-      <div class="section-title">Output</div>
-      <div class="wh-out" id="wh-out">-- Enter webhook URL and click Generate...</div>
-    </div>
-  </div>
-</div>
-
-<!-- ═══ PROTECTION PAGE ═══ -->
-<div class="page" id="pg-prot" style="display:none">
-  <div class="page-title">Protection Injection</div>
-  <div class="page-sub">Generate protection code to paste at the top of your script before obfuscating</div>
 
   <div class="warn-banner">
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 2L2 13h12L8 2z"/><path d="M8 6v4M8 11v1"/></svg>
