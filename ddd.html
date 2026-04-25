@@ -1,0 +1,1980 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LuaShield — Advanced Lua Obfuscator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:     #0d0d0d;
+  --bg2:    #131313;
+  --bg3:    #1a1a1a;
+  --card:   #161616;
+  --border: #252525;
+  --border2:#2e2e2e;
+  --gold:   #f5c542;
+  --gold2:  #e6b020;
+  --gold3:  #ffd96a;
+  --text:   #e8e8e8;
+  --muted:  #6b6b6b;
+  --dim:    #3a3a3a;
+  --green:  #4ade80;
+  --red:    #f87171;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  min-height: 100%;
+  font-family: 'Outfit', sans-serif;
+  font-size: 14px;
+  background: var(--bg);
+  color: var(--text);
+  overflow-x: hidden;
+}
+
+/* ── Nav ── */
+nav {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(13,13,13,0.95);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; padding: 0 40px; height: 60px; gap: 40px;
+}
+.nav-logo {
+  font-size: 18px; font-weight: 700; color: var(--gold); letter-spacing: -0.5px;
+  display: flex; align-items: center; gap: 8px;
+}
+.nav-logo svg { width: 20px; height: 20px; }
+.nav-links { display: flex; gap: 4px; margin-left: auto; }
+.nav-link {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 14px; border-radius: 6px;
+  font-size: 13px; color: var(--muted); cursor: pointer;
+  transition: all .15s; text-decoration: none;
+}
+.nav-link:hover { color: var(--text); background: var(--bg3); }
+.nav-link.active { color: var(--text); background: var(--bg3); }
+.nav-link svg { width: 14px; height: 14px; }
+
+/* ── Layout ── */
+.page { max-width: 820px; margin: 0 auto; padding: 48px 24px 80px; }
+.page-title { font-size: 28px; font-weight: 700; margin-bottom: 6px; }
+.page-sub { color: var(--muted); font-size: 14px; margin-bottom: 40px; }
+
+/* ── Cards ── */
+.section {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 16px;
+}
+.section-title {
+  font-size: 16px; font-weight: 600; color: var(--gold);
+  margin-bottom: 6px;
+}
+.section-sub {
+  font-size: 13px; color: var(--muted); margin-bottom: 20px;
+}
+
+/* ── Code upload area ── */
+.upload-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+.utab {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 16px; border-radius: 8px; cursor: pointer;
+  font-size: 13px; font-weight: 500; border: 1px solid var(--border);
+  background: transparent; color: var(--muted); transition: all .15s;
+}
+.utab.active {
+  background: var(--gold); color: #000; border-color: var(--gold);
+}
+.utab svg { width: 14px; height: 14px; }
+
+.drop-zone {
+  border: 2px dashed var(--border2);
+  border-radius: 10px; padding: 40px;
+  text-align: center; cursor: pointer; transition: all .2s;
+}
+.drop-zone:hover, .drop-zone.ov {
+  border-color: var(--gold); background: rgba(245,197,66,.04);
+}
+.drop-icon {
+  width: 40px; height: 40px; margin: 0 auto 12px;
+  background: var(--bg3); border-radius: 10px;
+  display: grid; place-items: center;
+}
+.drop-icon svg { width: 20px; height: 20px; color: var(--gold); }
+.drop-title { font-weight: 500; margin-bottom: 4px; }
+.drop-sub { font-size: 12px; color: var(--muted); }
+
+.code-area {
+  display: none; flex-direction: column; gap: 12px;
+}
+.code-area.active { display: flex; }
+
+textarea {
+  width: 100%; min-height: 220px;
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: 8px; padding: 14px;
+  font-family: 'JetBrains Mono', monospace; font-size: 12px;
+  color: var(--text); resize: vertical; outline: none;
+  transition: border-color .15s; line-height: 1.7;
+}
+textarea:focus { border-color: var(--gold); }
+textarea::placeholder { color: var(--dim); }
+
+/* ── Security Tier ── */
+.tier-options { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.tier-opt {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 16px; border-radius: 10px;
+  border: 1px solid var(--border2); cursor: pointer; transition: all .15s;
+  background: var(--bg2);
+}
+.tier-opt.selected {
+  border-color: var(--gold); background: rgba(245,197,66,.06);
+}
+.tier-radio {
+  width: 18px; height: 18px; border-radius: 50%;
+  border: 2px solid var(--border2); flex-shrink: 0;
+  display: grid; place-items: center; transition: all .15s;
+}
+.tier-opt.selected .tier-radio {
+  border-color: var(--gold); background: var(--gold);
+}
+.tier-radio::after {
+  content: ''; width: 6px; height: 6px; border-radius: 50%;
+  background: #000; display: none;
+}
+.tier-opt.selected .tier-radio::after { display: block; }
+.tier-info { flex: 1; }
+.tier-name { font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+.tier-desc { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.badge-rec {
+  font-size: 10px; font-weight: 600; background: var(--gold); color: #000;
+  padding: 2px 8px; border-radius: 20px; letter-spacing: .3px;
+}
+
+/* ── Feature chips ── */
+.features-row {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  padding: 16px; border-radius: 10px;
+  border: 1px solid var(--border); background: var(--bg2);
+}
+.feature-chip {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; color: var(--text);
+}
+.feature-chip svg { width: 14px; height: 14px; color: var(--gold); }
+
+/* ── Toggles ── */
+.toggle-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 0; border-bottom: 1px solid var(--border);
+}
+.toggle-row:last-child { border-bottom: none; padding-bottom: 0; }
+.toggle-info { display: flex; flex-direction: column; gap: 2px; }
+.toggle-label { font-size: 14px; font-weight: 500; }
+.toggle-desc { font-size: 12px; color: var(--muted); }
+.sw {
+  position: relative; width: 40px; height: 22px;
+  background: var(--border2); border-radius: 11px; cursor: pointer;
+  transition: background .2s; flex-shrink: 0;
+}
+.sw.on { background: var(--gold); }
+.sw::after {
+  content: ''; position: absolute; top: 3px; left: 3px;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: #fff; transition: transform .2s;
+}
+.sw.on::after { transform: translateX(18px); }
+
+/* ── Output area ── */
+.out-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 12px;
+}
+.out-label { font-weight: 600; font-size: 14px; }
+.out-actions { display: flex; gap: 8px; }
+.out-btn {
+  display: flex; align-items: center; gap: 5px;
+  padding: 6px 12px; border-radius: 7px; cursor: pointer;
+  font-size: 12px; font-weight: 500; transition: all .15s;
+  border: 1px solid var(--border2); background: var(--bg2); color: var(--muted);
+}
+.out-btn:hover { border-color: var(--gold); color: var(--gold); }
+.out-btn svg { width: 12px; height: 12px; }
+.out-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+/* ── Stats row ── */
+.stats-row {
+  display: none; gap: 24px; padding: 16px 0;
+  border-top: 1px solid var(--border); margin-top: 16px; flex-wrap: wrap;
+}
+.stats-row.show { display: flex; }
+.stat { display: flex; flex-direction: column; gap: 3px; }
+.stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; }
+.stat-val { font-size: 20px; font-weight: 700; color: var(--gold); font-variant-numeric: tabular-nums; }
+
+/* ── Progress ── */
+.prog { display: none; margin-bottom: 12px; }
+.prog.show { display: block; }
+.prog-track { height: 3px; background: var(--border2); border-radius: 2px; overflow: hidden; }
+.prog-fill { height: 100%; background: var(--gold); width: 0%; transition: width .2s; }
+.prog-label { font-size: 11px; color: var(--muted); margin-top: 6px; }
+
+/* ── Log ── */
+.log-box {
+  display: none; background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 12px 14px; max-height: 120px; overflow-y: auto;
+  font-family: 'JetBrains Mono', monospace; font-size: 11px; line-height: 1.8;
+}
+.log-box.show { display: block; }
+.log-box::-webkit-scrollbar { width: 4px; }
+.log-box::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+.log-ok   { color: var(--green); }
+.log-info { color: var(--gold); }
+.log-warn { color: var(--red); }
+
+/* ── Main action button ── */
+.btn-obf {
+  width: 100%; padding: 14px;
+  background: var(--gold); color: #000;
+  border: none; border-radius: 10px; cursor: pointer;
+  font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 700;
+  letter-spacing: .3px; transition: all .15s;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.btn-obf:hover { background: var(--gold3); }
+.btn-obf:disabled { opacity: .4; cursor: not-allowed; }
+.btn-obf svg { width: 16px; height: 16px; }
+
+/* ── Webhook tab ── */
+.wh-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media(max-width:640px) { .wh-grid { grid-template-columns: 1fr; } }
+.field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.field label { font-size: 12px; color: var(--muted); font-weight: 500; }
+.field input, .field select {
+  background: var(--bg2); border: 1px solid var(--border2);
+  color: var(--text); font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; padding: 9px 12px; border-radius: 8px; outline: none; width: 100%;
+  transition: border-color .15s;
+}
+.field input:focus, .field select:focus { border-color: var(--gold); }
+.wh-out {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 8px; min-height: 280px; padding: 14px;
+  font-family: 'JetBrains Mono', monospace; font-size: 11px;
+  line-height: 1.8; white-space: pre; overflow: auto; color: var(--text);
+}
+.warn-banner {
+  background: rgba(245,197,66,.08); border: 1px solid rgba(245,197,66,.25);
+  border-radius: 8px; padding: 12px 16px; font-size: 13px;
+  color: var(--gold); line-height: 1.7; margin-bottom: 20px;
+  display: flex; gap: 10px;
+}
+.warn-banner svg { width: 16px; height: 16px; flex-shrink: 0; margin-top: 2px; }
+
+/* ── Protection tab ── */
+.prot-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media(max-width:640px) { .prot-grid { grid-template-columns: 1fr; } }
+
+/* ── Nav tabs ── */
+.page-tabs { display: flex; gap: 4px; margin-bottom: 32px; }
+.ptab {
+  padding: 8px 18px; border-radius: 8px; cursor: pointer;
+  font-size: 13px; font-weight: 500; color: var(--muted); transition: all .15s;
+  border: 1px solid transparent;
+}
+.ptab:hover { color: var(--text); background: var(--bg3); }
+.ptab.active { color: var(--text); background: var(--bg3); border-color: var(--border); }
+
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ── Misc ── */
+.divider { height: 1px; background: var(--border); margin: 20px 0; }
+.btn-sm {
+  padding: 8px 16px; border-radius: 8px; cursor: pointer;
+  font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 600;
+  transition: all .15s; border: none;
+}
+.btn-gold { background: var(--gold); color: #000; }
+.btn-gold:hover { background: var(--gold3); }
+.btn-ghost { background: var(--bg3); color: var(--text); border: 1px solid var(--border2); }
+.btn-ghost:hover { border-color: var(--gold); color: var(--gold); }
+.flex-row { display: flex; gap: 8px; }
+.select-styled {
+  background: var(--bg2); border: 1px solid var(--border2);
+  color: var(--text); font-family: 'Outfit', sans-serif;
+  font-size: 13px; padding: 8px 12px; border-radius: 8px;
+  outline: none; cursor: pointer; transition: border-color .15s;
+}
+
+/* ── Auth overlay ── */
+.auth-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+}
+.auth-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 16px; padding: 48px 40px;
+  width: 100%; max-width: 400px; text-align: center;
+}
+.auth-logo {
+  font-size: 22px; font-weight: 700; color: var(--gold);
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  margin-bottom: 8px;
+}
+.auth-sub { font-size: 13px; color: var(--muted); margin-bottom: 32px; }
+.btn-google {
+  width: 100%; padding: 12px 20px;
+  background: #fff; color: #1f1f1f;
+  border: none; border-radius: 10px; cursor: pointer;
+  font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 600;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  transition: all .15s; margin-bottom: 16px;
+}
+.btn-google:hover { background: #f0f0f0; }
+.btn-google svg { width: 18px; height: 18px; flex-shrink: 0; }
+.auth-divider {
+  font-size: 11px; color: var(--muted); margin: 4px 0 20px;
+}
+.auth-user {
+  display: flex; align-items: center; gap: 10px;
+  padding: 6px 14px 6px 6px;
+  border-radius: 20px; background: var(--bg3);
+  border: 1px solid var(--border);
+}
+.auth-avatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  object-fit: cover;
+}
+.auth-avatar-placeholder {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--gold); display: grid; place-items: center;
+  font-size: 12px; font-weight: 700; color: #000;
+}
+.auth-name { font-size: 13px; font-weight: 500; max-width: 120px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.btn-signout {
+  font-size: 11px; color: var(--muted); background: none; border: none;
+  cursor: pointer; padding: 2px 6px; border-radius: 4px; margin-left: 2px;
+  transition: color .15s;
+}
+.btn-signout:hover { color: var(--red); }
+.select-styled:focus { border-color: var(--gold); }
+</style>
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+</head>
+<body>
+
+<!-- Nav -->
+<nav>
+  <div class="nav-logo">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8">
+      <path d="M10 2L3 6v4c0 4 3.5 7.5 7 8 3.5-.5 7-4 7-8V6L10 2z"/>
+    </svg>
+    LuaShield
+  </div>
+  <div class="nav-links">
+    <a class="nav-link active" onclick="showPage('obf',this)">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg>
+      Upload
+    </a>
+
+  </div>
+  <div id="nav-user" style="display:none"></div>
+</nav>
+
+<!-- ═══ UPLOAD / OBFUSCATE PAGE ═══ -->
+<div class="page" id="pg-obf">
+  <div class="page-title">Upload Script</div>
+  <div class="page-sub">Upload your Lua script to obfuscate with advanced security</div>
+
+  <!-- Source input -->
+  <div class="section">
+    <div class="upload-tabs">
+      <div class="utab" id="ut-file" onclick="setUploadTab('file')">
+        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 12V4l4-3h6v11H2z"/><path d="M6 1v3H2"/></svg>
+        Upload File
+      </div>
+      <div class="utab active" id="ut-paste" onclick="setUploadTab('paste')">
+        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="2" width="8" height="10" rx="1"/><path d="M5 5h4M5 7h4M5 9h2"/></svg>
+        Paste Code
+      </div>
+    </div>
+
+    <!-- Drop zone (file mode) -->
+    <div class="drop-zone" id="drop" style="display:none">
+      <div class="drop-icon">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 14V4M6 8l4-4 4 4"/><path d="M4 16h12"/></svg>
+      </div>
+      <div class="drop-title">Drag and drop or click to select</div>
+      <div class="drop-sub">.lua, .luau, .txt files up to 5.00 MB</div>
+      <input type="file" id="fi" accept=".lua,.txt" style="display:none">
+    </div>
+
+    <!-- Paste mode -->
+    <div class="code-area active" id="paste-area">
+      <textarea id="src" placeholder="-- Paste your Lua source code here...&#10;&#10;print(&quot;Hello, World!&quot;)"></textarea>
+    </div>
+  </div>
+
+  <!-- Security Tier -->
+  <div class="section">
+    <div class="section-title">Security Tier</div>
+    <div class="section-sub">Choose your protection level. Higher tiers provide more security but increase file size.</div>
+
+    <div class="tier-options" id="tiers">
+      <div class="tier-opt" onclick="setTier(this,'1')">
+        <div class="tier-radio"></div>
+        <div class="tier-info">
+          <div class="tier-name">Light <span class="badge-rec">Fast</span></div>
+          <div class="tier-desc">Single VM layer. Quick processing, smaller output.</div>
+        </div>
+      </div>
+      <div class="tier-opt selected" onclick="setTier(this,'2')">
+        <div class="tier-radio"></div>
+        <div class="tier-info">
+          <div class="tier-name">Medium <span class="badge-rec">Recommended</span></div>
+          <div class="tier-desc">Double VM layer. Balanced security and performance.</div>
+        </div>
+      </div>
+      <div class="tier-opt" onclick="setTier(this,'3')">
+        <div class="tier-radio"></div>
+        <div class="tier-info">
+          <div class="tier-name">Maximum</div>
+          <div class="tier-desc">Triple VM layer. Maximum protection, larger output size.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- All features always included -->
+    <div class="features-row" style="margin-top:16px">
+      <div class="feature-chip">
+        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 7l3 3 7-7"/></svg>
+        Base-85 VM
+      </div>
+      <div class="feature-chip">
+        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 7l3 3 7-7"/></svg>
+        Anti-Tamper
+      </div>
+      <div class="feature-chip">
+        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 7l3 3 7-7"/></svg>
+        Anti-Hook
+      </div>
+      <div class="feature-chip">
+        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 7l3 3 7-7"/></svg>
+        5-Segment Payload Split
+      </div>
+      <div class="feature-chip">
+        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 7l3 3 7-7"/></svg>
+        Minified Identifiers
+      </div>
+    </div>
+
+  </div>
+
+  <!-- All options always on - hidden compat toggles -->
+  <div style="display:none">
+    <div class="sw on" id="t-com"></div>
+    <div class="sw on" id="t-vm"></div>
+    <div class="sw on" id="t-wha"></div>
+    <div class="sw on" id="t-prot"></div>
+    <div id="t-api"></div><div id="t-str"></div>
+    <div id="t-num"></div><div id="t-var"></div><div id="t-jnk"></div>
+    <div class="sw on" id="p-ahook"></div>
+    <div class="sw on" id="p-ahttp"></div>
+    <div class="sw on" id="p-aenv"></div>
+    <div class="sw" id="p-acrsh"></div>
+    <div class="sw on" id="p-awh"></div>
+    <select id="p-action"><option value="return" selected>return</option></select>
+  </div>
+
+  <!-- Obfuscate button -->
+  <button class="btn-obf" id="btnRun" onclick="runObf()">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+    Obfuscate Script
+  </button>
+
+  <!-- Progress -->
+  <div class="prog" id="prog" style="margin-top:16px">
+    <div class="prog-track"><div class="prog-fill" id="bar"></div></div>
+    <div class="prog-label" id="lbl">Processing...</div>
+  </div>
+
+  <!-- Log -->
+  <div class="log-box" id="log" style="margin-top:12px"></div>
+
+  <!-- Output -->
+  <div class="section" id="out-section" style="margin-top:16px;display:none">
+    <div class="out-header">
+      <div class="out-label">Obfuscated Output</div>
+      <div class="out-actions">
+        <button class="out-btn" id="btnCopy" onclick="doCopy()">
+          <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="7" height="7" rx="1"/><path d="M2 8V2h6"/></svg>
+          Copy
+        </button>
+        <button class="out-btn" id="btnDl" onclick="doDl()">
+          <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 2v6M3 6l3 3 3-3"/><path d="M2 10h8"/></svg>
+          Download
+        </button>
+        <button class="out-btn" onclick="doClear()" style="color:var(--red)">
+          <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 2l8 8M10 2L2 10"/></svg>
+          Clear
+        </button>
+      </div>
+    </div>
+    <textarea id="out" readonly style="min-height:280px;background:var(--bg);" placeholder="// Obfuscated code will appear here..."></textarea>
+
+    <!-- Stats -->
+    <div class="stats-row" id="stats">
+      <div class="stat"><div class="stat-label">Input</div><div class="stat-val" id="s-in">—</div></div>
+      <div class="stat"><div class="stat-label">Output</div><div class="stat-val" id="s-out">—</div></div>
+    </div>
+  </div>
+</div>
+
+
+
+  <!-- Protection always-on hidden elements -->
+  <div style="display:none">
+    <div class="sw on" id="p-ahook"></div>
+    <div class="sw on" id="p-ahttp"></div>
+    <div class="sw on" id="p-aenv"></div>
+    <div class="sw" id="p-acrsh"></div>
+    <div class="sw on" id="p-awh"></div>
+    <select id="p-action"><option value="return" selected>return</option></select>
+    <div id="prot-out"></div>
+  </div>
+</div>
+
+<select class="sel" id="passes" style="display:none"><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option></select>
+<script>
+'use strict';
+
+// ══════════════════════════════════════════════
+//  UI
+// ══════════════════════════════════════════════
+function switchTab(id, el) { /* legacy - unused */ }
+function tog(el) { el.classList.toggle('on'); }
+function isOn(id) { return document.getElementById(id).classList.contains('on'); }
+
+const srcEl = document.getElementById('src');
+const outEl = document.getElementById('out');
+const logEl = document.getElementById('log');
+const barEl = document.getElementById('bar');
+const lblEl = document.getElementById('lbl');
+
+function setP(pct, msg) {
+  document.getElementById('prog').classList.add('show');
+  barEl.style.width = pct + '%';
+  lblEl.textContent = msg;
+}
+function lg(msg, cls) {
+  logEl.classList.add('show');
+  const s = document.createElement('span');
+  const clsMap = {ok:'log-ok', info:'log-info', warn:'log-warn'};
+  s.className = clsMap[cls] || '';
+  s.textContent = '> ' + msg + '\n';
+  logEl.appendChild(s);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+function updLC() {
+  const so = outEl.value ? outEl.value.split('\n').length : 0;
+  const sec = document.getElementById('out-section');
+  if (sec) sec.style.display = outEl.value ? '' : 'none';
+}
+srcEl.addEventListener('input', updLC);
+
+const dropEl = document.getElementById('drop');
+const fileEl = document.getElementById('fi');
+dropEl.addEventListener('click', () => fileEl.click());
+fileEl.addEventListener('change', e => loadF(e.target.files[0]));
+dropEl.addEventListener('dragover', e => { e.preventDefault(); dropEl.classList.add('ov'); });
+dropEl.addEventListener('dragleave', () => dropEl.classList.remove('ov'));
+dropEl.addEventListener('drop', e => { e.preventDefault(); dropEl.classList.remove('ov'); loadF(e.dataTransfer.files[0]); });
+function loadF(f) {
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = e => { srcEl.value = e.target.result; updLC(); lg('Loaded: ' + f.name, 'ok'); };
+  r.readAsText(f);
+}
+function doCopy() { navigator.clipboard.writeText(outEl.value).then(() => lg('Copied to clipboard', 'ok')); }
+function doDl() {
+  const b = new Blob([outEl.value], { type: 'text/plain' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(b);
+  a.download = 'obfuscated.lua'; a.click();
+  lg('Downloaded: obfuscated.lua', 'ok');
+}
+function doClear() {
+  srcEl.value = ''; outEl.value = '';
+  logEl.innerHTML = ''; logEl.classList.remove('show');
+  document.getElementById('prog').classList.remove('show');
+  document.getElementById('stats').classList.remove('show');
+  document.getElementById('btnCopy').disabled = true;
+  document.getElementById('btnDl').disabled = true;
+  updLC();
+}
+function fmtB(b) { return b < 1024 ? b+'B' : (b/1024).toFixed(1)+'KB'; }
+
+// ══════════════════════════════════════════════
+//  TOKENIZER
+// ══════════════════════════════════════════════
+const TK = { WS:0, CMT:1, LSTR:2, STR:3, NUM:4, ID:5, KW:6, OP:7 };
+const LKW = new Set(['and','break','do','else','elseif','end','false','for','function',
+  'goto','if','in','local','nil','not','or','repeat','return','then','true','until','while']);
+const LBUILTIN = new Set(['print','warn','error','assert','pcall','xpcall','ipairs','pairs',
+  'next','select','type','tostring','tonumber','rawget','rawset','rawequal','rawlen',
+  'setmetatable','getmetatable','require','load','loadstring','dofile','collectgarbage',
+  'coroutine','string','table','math','os','io','bit32','utf8','debug',
+  'game','workspace','script','plugin','shared','_G','_ENV','task','wait','spawn',
+  'delay','tick','time','elapsedTime','Instance','Vector3','Vector2','CFrame',
+  'Color3','UDim','UDim2','Enum','Ray','Region3','NumberSequence','ColorSequence',
+  'BrickColor','TweenInfo','typeof','newproxy','getfenv','setfenv','unpack']);
+
+function tokenize(src) {
+  const toks = [];
+  let i = 0, n = src.length;
+  while (i < n) {
+    const c = src[i], c1 = src[i+1];
+    if (c === '[' && (c1 === '[' || c1 === '=')) {
+      let eq = 0, j = i+1;
+      while (j < n && src[j] === '=') { eq++; j++; }
+      if (j < n && src[j] === '[') {
+        const cls = ']' + '='.repeat(eq) + ']';
+        const end = src.indexOf(cls, j+1);
+        if (end !== -1) { toks.push({ t: TK.LSTR, v: src.slice(i, end+cls.length) }); i = end+cls.length; continue; }
+      }
+    }
+    if (c === '-' && c1 === '-') {
+      if (src[i+2] === '[') {
+        let eq = 0, j = i+3;
+        while (j < n && src[j] === '=') { eq++; j++; }
+        if (j < n && src[j] === '[') {
+          const cls = ']' + '='.repeat(eq) + ']';
+          const end = src.indexOf(cls, j+1);
+          if (end !== -1) { toks.push({ t: TK.CMT, v: src.slice(i, end+cls.length) }); i = end+cls.length; continue; }
+        }
+      }
+      let j = i+2;
+      while (j < n && src[j] !== '\n') j++;
+      toks.push({ t: TK.CMT, v: src.slice(i, j) }); i = j; continue;
+    }
+    if (c === '"' || c === "'") {
+      const q = c; let j = i+1, raw = '';
+      while (j < n) {
+        if (src[j] === '\\') { raw += src[j] + (src[j+1]||''); j += 2; }
+        else if (src[j] === q) break;
+        else raw += src[j++];
+      }
+      toks.push({ t: TK.STR, v: q+raw+q, raw }); i = j+1; continue;
+    }
+    if (/[0-9]/.test(c) || (c === '.' && /[0-9]/.test(c1||''))) {
+      let j = i;
+      if (src[j] === '0' && /[xX]/.test(src[j+1]||'')) {
+        j += 2; while (j < n && /[0-9a-fA-F_]/.test(src[j])) j++;
+      } else {
+        while (j < n && /[0-9]/.test(src[j])) j++;
+        if (src[j] === '.') { j++; while (j < n && /[0-9]/.test(src[j])) j++; }
+        if (j < n && /[eE]/.test(src[j])) {
+          j++; if (j < n && /[+-]/.test(src[j])) j++;
+          while (j < n && /[0-9]/.test(src[j])) j++;
+        }
+      }
+      toks.push({ t: TK.NUM, v: src.slice(i, j) }); i = j; continue;
+    }
+    if (/[a-zA-Z_]/.test(c)) {
+      let j = i;
+      while (j < n && /[a-zA-Z0-9_]/.test(src[j])) j++;
+      const w = src.slice(i, j);
+      toks.push({ t: LKW.has(w) ? TK.KW : TK.ID, v: w }); i = j; continue;
+    }
+    if (/\s/.test(c)) {
+      let j = i; while (j < n && /\s/.test(src[j])) j++;
+      toks.push({ t: TK.WS, v: src.slice(i, j) }); i = j; continue;
+    }
+    const two = src.slice(i, i+2);
+    if (['..','==','~=','<=','>=','::','//','<<','>>'].includes(two)) {
+      toks.push({ t: TK.OP, v: two }); i += 2;
+    } else { toks.push({ t: TK.OP, v: c }); i++; }
+  }
+  return toks;
+}
+function toks2s(toks) { return toks.map(t => t.v).join(''); }
+
+// ══════════════════════════════════════════════
+//  CONSTANTS — NTT ENGINE
+// ══════════════════════════════════════════════
+// Primitive multipliers for rolling XOR (must be odd, ideally prime)
+const ROLL_MULS = [131, 149, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223];
+
+// ══════════════════════════════════════════════
+//  ROLLING XOR UTILS
+// ══════════════════════════════════════════════
+
+// Encode byte array with rolling XOR key.
+// Decoder Lua index starts at 3, so luaIdx = j + 3
+function rollEnc(bytes, K, M) {
+  const enc = []; let k = K;
+  for (let j = 0; j < bytes.length; j++) {
+    enc.push((bytes[j] ^ k) & 0xFF);
+    k = (k * M + (j + 3)) % 256;
+  }
+  return enc;
+}
+
+// Generate Lua decoder function (_ds)
+// Emitted as ONE LINE — so passOpaque/passJunk never inject inside it.
+function mkDS(vName) {
+  return (
+    `local ${vName}=function(t) ` +
+    `local k,m,r=t[1],t[2],{} ` +
+    `local _x=bit32 and bit32.bxor or function(a,b) ` +
+    `local s,v=1,0 while a>0 or b>0 do ` +
+    `local ra,rb=a%2,b%2 ` +
+    `if ra~=rb then v=v+s end ` +
+    `a,b,s=(a-ra)/2,(b-rb)/2,s*2 ` +
+    `end return v end ` +
+    `for i=3,#t do ` +
+    `r[i-2]=string.char(_x(t[i],k)%256) ` +
+    `k=(k*m+i)%256 ` +
+    `end ` +
+    `return table.concat(r) ` +
+    `end\n`
+  );
+}
+
+// ══════════════════════════════════════════════
+//  PASS: Strip Comments
+// ══════════════════════════════════════════════
+function passComments(toks) {
+  return toks.filter(t => t.t !== TK.CMT);
+}
+
+// ══════════════════════════════════════════════
+//  UTF-8 UTILS  (Chinese / non-ASCII support)
+//  Lua source files are UTF-8; charCodeAt()&0xFF
+//  truncates high bytes of CJK chars → wrong bytes.
+//  These helpers convert correctly.
+// ══════════════════════════════════════════════
+function codeToUTF8(code) {
+  if (code < 0x80)    return [code];
+  if (code < 0x800)   return [0xC0|(code>>6),  0x80|(code&0x3F)];
+  if (code < 0x10000) return [0xE0|(code>>12), 0x80|((code>>6)&0x3F), 0x80|(code&0x3F)];
+  return [0xF0|(code>>18), 0x80|((code>>12)&0x3F), 0x80|((code>>6)&0x3F), 0x80|(code&0x3F)];
+}
+
+// Convert a JS string to a flat array of UTF-8 bytes (handles surrogate pairs)
+function strToUTF8(str) {
+  const bytes = [];
+  for (let i = 0; i < str.length; i++) {
+    let c = str.charCodeAt(i);
+    if (c >= 0xD800 && c <= 0xDBFF && i+1 < str.length) {
+      const lo = str.charCodeAt(i+1);
+      if (lo >= 0xDC00 && lo <= 0xDFFF) { c = 0x10000 + (c-0xD800)*0x400 + (lo-0xDC00); i++; }
+    }
+    bytes.push(...codeToUTF8(c));
+  }
+  return bytes;
+}
+
+// ══════════════════════════════════════════════
+//  PASS: Encode Strings → rolling XOR _ds(...)
+// ══════════════════════════════════════════════
+function luaUnesc(raw) {
+  const out = []; let i = 0;
+  while (i < raw.length) {
+    if (raw[i] !== '\\') {
+      // Non-escape character: convert to UTF-8 bytes (handles CJK/emoji)
+      let c = raw.charCodeAt(i);
+      if (c >= 0xD800 && c <= 0xDBFF && i+1 < raw.length) {
+        const lo = raw.charCodeAt(i+1);
+        if (lo >= 0xDC00 && lo <= 0xDFFF) { c = 0x10000+(c-0xD800)*0x400+(lo-0xDC00); i++; }
+      }
+      out.push(...codeToUTF8(c)); i++; continue;
+    }
+    i++;
+    const e = raw[i] || '';
+    if      (e==='a') { out.push(7);  i++; }
+    else if (e==='b') { out.push(8);  i++; }
+    else if (e==='t') { out.push(9);  i++; }
+    else if (e==='n') { out.push(10); i++; }
+    else if (e==='v') { out.push(11); i++; }
+    else if (e==='f') { out.push(12); i++; }
+    else if (e==='r') { out.push(13); i++; }
+    else if (e==='\\'){out.push(92); i++; }
+    else if (e==='"') { out.push(34); i++; }
+    else if (e==="'") { out.push(39); i++; }
+    else if (e==='x') { const h = raw.slice(i+1,i+3); out.push(parseInt(h,16)||0); i+=3; }
+    else if (e==='z') { i++; while (i < raw.length && /\s/.test(raw[i])) i++; }
+    else if (/[0-9]/.test(e)) {
+      let j=i, num='';
+      while (j-i<3 && j<raw.length && /[0-9]/.test(raw[j])) num+=raw[j++];
+      out.push(parseInt(num)%256); i=j;
+    } else { out.push(...codeToUTF8(raw.charCodeAt(i++))); }
+  }
+  return out;
+}
+
+function passStrings(toks, dsV) {
+  let cnt = 0;
+  const res = [];
+  let prevID = null;
+  for (let i = 0; i < toks.length; i++) {
+    const tok = toks[i];
+    if (tok.t !== TK.STR) {
+      if (tok.t !== TK.WS) prevID = tok;
+      res.push(tok); continue;
+    }
+    const raw = tok.raw || '';
+    if (!raw) { res.push(tok); continue; }
+    if (prevID && prevID.t === TK.ID && prevID.v === 'require') { res.push(tok); continue; }
+    if (raw.length > 400) { res.push(tok); continue; }
+    // ★ Skip strings used in equality comparisons (answer == "確定")
+    // Roblox passes the raw string to OnInvoke; if encoded it won't match
+    {
+      let pp = i - 1; while (pp >= 0 && toks[pp].t === TK.WS) pp--;
+      let nn = i + 1; while (nn < toks.length && toks[nn].t === TK.WS) nn++;
+      const prevOp = pp >= 0 ? toks[pp] : null;
+      const nextOp = nn < toks.length ? toks[nn] : null;
+      const inCmp = (prevOp?.t === TK.OP && (prevOp.v === '==' || prevOp.v === '~=')) ||
+                    (nextOp?.t === TK.OP && (nextOp.v === '==' || nextOp.v === '~='));
+      if (inCmp) { res.push(tok); prevID = tok; continue; }
+    }
+    try {
+      const bytes = luaUnesc(raw);
+      // luaUnesc now returns proper UTF-8 bytes (all 0-255), so CJK strings can be encoded
+      if (!bytes.length || bytes.some(b => isNaN(b) || b < 0 || b > 255)) {
+        res.push(tok); continue;
+      }
+      const K = (Math.random()*200|0)+10;
+      const M = ROLL_MULS[Math.random()*ROLL_MULS.length|0];
+      res.push({ t: TK.OP, v: `${dsV}({${K},${M},${rollEnc(bytes,K,M).join(',')}})` });
+      cnt++;
+    } catch(_) { res.push(tok); }
+    prevID = tok;
+  }
+  return [res, cnt];
+}
+
+// ══════════════════════════════════════════════
+//  PASS: Rename Local Variables
+// ══════════════════════════════════════════════
+const _NC = 'IlIlIllIlIlIllIlIllIlI';
+let _ns = 0x7F3A1;
+// mkN: generates I/l-only names for USER variable renaming
+function mkN() {
+  let s = '_';
+  for (let i = 0; i < 10 + (_ns & 3); i++) {
+    _ns = ((_ns * 1664525 + 1013904223) >>> 0);
+    s += _NC[_ns % _NC.length];
+  }
+  return s;
+}
+// mkSN: generates hex-suffix names for INJECTED CODE variables (dsVar, gV, etc.)
+// These can NEVER collide with mkN() names since mkN only uses I/l characters
+// while mkSN uses 0-9 a-f characters — completely disjoint character sets.
+function mkSN() {
+  return '_LS' + (Math.random()*0xFFFFFF|0).toString(16).padStart(6,'0') +
+                 (Math.random()*0xFFFF|0).toString(16).padStart(4,'0');
+}
+
+function passRename(toks) {
+  const locals = new Set();
+  for (let i = 0; i < toks.length; i++) {
+    const t = toks[i];
+    if (t.t !== TK.KW || t.v !== 'local') continue;
+    let j = i+1;
+    while (j < toks.length && toks[j].t === TK.WS) j++;
+    if (j < toks.length && toks[j].t === TK.KW && toks[j].v === 'function') {
+      j++; while (j < toks.length && toks[j].t === TK.WS) j++;
+      if (j < toks.length && toks[j].t === TK.ID && !LBUILTIN.has(toks[j].v)) locals.add(toks[j].v);
+      continue;
+    }
+    while (j < toks.length) {
+      if (toks[j].t === TK.WS) { j++; continue; }
+      if (toks[j].t === TK.ID && !LBUILTIN.has(toks[j].v)) {
+        locals.add(toks[j].v); j++;
+        while (j < toks.length && toks[j].t === TK.WS) j++;
+        if (j < toks.length && toks[j].t === TK.OP && toks[j].v === ',') { j++; } else break;
+      } else break;
+    }
+  }
+  for (let i = 0; i < toks.length; i++) {
+    const t = toks[i];
+    if (t.t !== TK.KW || t.v !== 'for') continue;
+    let j = i+1;
+    while (j < toks.length) {
+      if (toks[j].t === TK.WS) { j++; continue; }
+      if (toks[j].t === TK.ID && !LBUILTIN.has(toks[j].v)) {
+        locals.add(toks[j].v); j++;
+        while (j < toks.length && toks[j].t === TK.WS) j++;
+        if (j < toks.length && toks[j].t === TK.OP && toks[j].v === ',') j++; else break;
+      } else break;
+    }
+  }
+  for (let i = 0; i < toks.length; i++) {
+    const t = toks[i];
+    if (t.t !== TK.KW || t.v !== 'function') continue;
+    let j = i+1;
+    while (j < toks.length && toks[j].t !== TK.OP) j++;
+    if (j < toks.length && toks[j].v === '(') {
+      j++;
+      while (j < toks.length) {
+        if (toks[j].t === TK.WS) { j++; continue; }
+        if (toks[j].t === TK.ID && !LBUILTIN.has(toks[j].v)) {
+          locals.add(toks[j].v); j++;
+          while (j < toks.length && toks[j].t === TK.WS) j++;
+          if (j < toks.length && toks[j].t === TK.OP && toks[j].v === ',') j++; else break;
+        } else break;
+      }
+    }
+  }
+  const map = new Map();
+  for (const n of locals) {
+    // Skip _ prefix vars: cross-closure shared state (e.g. _upActive, _upByB)
+    // Renaming these breaks upvalue sharing between Heartbeat/InputBegan/functions
+    if (n.startsWith('_')) continue;
+    map.set(n, mkN());
+  }
+  const res = [];
+  for (let i = 0; i < toks.length; i++) {
+    const t = toks[i];
+    if (t.t === TK.ID && map.has(t.v)) {
+      let p = i-1;
+      while (p >= 0 && toks[p].t === TK.WS) p--;
+      if (p >= 0 && toks[p].t === TK.OP && toks[p].v === '.') { res.push(t); continue; }
+      res.push({ t: TK.ID, v: map.get(t.v) });
+    } else res.push(t);
+  }
+  return [res, map.size];
+}
+
+// ══════════════════════════════════════════════
+//  PASS: Encode Numbers
+// ══════════════════════════════════════════════
+function passNumbers(toks) {
+  return toks.map(t => {
+    if (t.t !== TK.NUM) return t;
+    const v = t.v;
+    if (v.includes('x')||v.includes('X')||v.includes('.')||v.includes('e')||v.includes('E')) return t;
+    const n = parseInt(v);
+    if (isNaN(n) || n < 0 || n > 99999 || Math.random() > 0.6) return t;
+    const a = (Math.random()*77|0)+3;
+    const enc = [
+      `(${n+a}-${a})`,
+      `(${Math.floor(n/3)}*3+${n%3})`,
+      `math.floor(${n+(Math.random()*0.9)})`,
+    ];
+    return { t: TK.OP, v: enc[Math.random()*enc.length|0] };
+  });
+}
+
+function rh(n) { let s=''; for(let i=0;i<n;i++) s+=(Math.random()*16|0).toString(16).toUpperCase(); return s; }
+
+// ══════════════════════════════════════════════
+//  HELPER: Is this line a safe injection point?
+//  Only inject junk/opaque after truly complete Lua statements.
+// ══════════════════════════════════════════════
+function isSafeInject(line) {
+  const tr = line.trim();
+  if (!tr) return false;
+  if (tr.startsWith('--')) return false;
+  if (tr.startsWith('return')) return false;
+  if (tr.startsWith('local _')) return false;
+  const last = tr[tr.length - 1];
+  if ('({[,'.includes(last)) return false;
+  if (/[+\-*\/%^]$/.test(tr)) return false;
+  if (/\.\.$$/.test(tr)) return false;
+  if (/\b(and|or|not|then|do|repeat|else|elseif|in)$/.test(tr)) return false;
+  // KEY FIX: line ends with ) AND contains 'function' → it's a multi-line
+  // function definition start, not a complete statement.
+  // Covers: "StartLoop = function()", "Connect(function(dt)", "task.spawn(function()"
+  if (last === ')' && /\bfunction\b/.test(tr)) return false;
+  if (/[)\]}]$/.test(tr)) return true;
+  if (/\b(end|nil|true|false)$/.test(tr)) return true;
+  if (/["']$/.test(tr)) return true;
+  if (/[a-zA-Z0-9_]$/.test(tr)) return true;
+  return false;
+}
+
+// ══════════════════════════════════════════════
+//  PASS: Inject Junk
+// ══════════════════════════════════════════════
+// ── Depth-aware injection helpers ────────────────
+// Track nesting depth to avoid injecting inside nested if/for/while blocks.
+// Only inject at depth 0 (top-level) or depth 1 (function body, not inside sub-blocks).
+
+function lineDepthChange(line) {
+  const tr = line.trim();
+  if (!tr || tr.startsWith('--')) return 0;
+  const fn  = (tr.match(/\bfunction\b/g)||[]).length;
+  const iff = (tr.match(/\bif\b/g)||[]).length;
+  const forr= (tr.match(/\bfor\b/g)||[]).length;
+  const whl = (tr.match(/\bwhile\b/g)||[]).length;
+  const rpt = (tr.match(/\brepeat\b/g)||[]).length;
+  const doAll=(tr.match(/\bdo\b/g)||[]).length;
+  const standaloneDo = Math.max(0, doAll - forr - whl);
+  const opens = fn + iff + forr + whl + rpt + standaloneDo;
+  const ends  = (tr.match(/\bend\b/g)||[]).length;
+  return opens - ends;
+}
+
+// Track table/array brace nesting { }
+// Prevents injection inside table constructors (e.g. local Config = { ... })
+function lineBraceChange(line) {
+  const tr = line.trim();
+  if (!tr || tr.startsWith('--')) return 0;
+  let n = 0;
+  for (const c of tr) { if (c === '{') n++; else if (c === '}') n--; }
+  return n;
+}
+
+function isSafeInjectAt(lines, idx, depth) {
+  // Only inject at top-level (0) or one level deep (inside function body only)
+  if (depth > 1) return false;
+  if (!isSafeInject(lines[idx])) return false;
+  // Look back up to 3 lines for continuation operators
+  for (let lb = 1; lb <= 3 && idx - lb >= 0; lb++) {
+    const prev = lines[idx - lb].trim();
+    if (!prev) break;
+    if (/\b(or|and)\s*$/.test(prev) || /\.\.$/.test(prev)) return false;
+    if (/[+\-*\/]\s*$/.test(prev)) return false;
+    if (isSafeInject(lines[idx - lb])) break;
+  }
+  return true;
+}
+
+function passJunk(src, density) {
+  const lines = src.split('\n');
+  const out = []; let cnt = 0;
+  let depth = 0, braces = 0;
+  for (let idx = 0; idx < lines.length; idx++) {
+    const line = lines[idx];
+    out.push(line);
+    // Only inject when NOT inside a table constructor AND at safe block depth
+    const safe = braces === 0 && isSafeInjectAt(lines, idx, depth);
+    depth += lineDepthChange(line);
+    braces = Math.max(0, braces + lineBraceChange(line));
+    if (!safe) continue;
+    if (Math.random() > density) continue;
+    const junk = [
+      () => `local _${rh(3)}=string.char(${Array.from({length:6+Math.random()*6|0},()=>Math.random()*254|0+1).join(',')})`,
+      () => `local _${rh(3)}=${0x1000000+(Math.random()*0xEFFFFFF|0)}`,
+      () => `local _${rh(3)}=tostring(${Math.random()*9999|0})`,
+      () => `local _${rh(3)}=math.floor(${Math.random()*9999|0}+0)`,
+      () => `local _${rh(3)}={${Array.from({length:4},()=>Math.random()*255|0).join(',')}}`,
+      () => `local _${rh(4)}=math.max(${Math.random()*255|0},${Math.random()*255|0})`,
+    ];
+    out.push(junk[Math.random()*junk.length|0]());
+    cnt++;
+  }
+  return [out.join('\n'), cnt];
+}
+
+// ══════════════════════════════════════════════
+//  PASS: Opaque Predicates
+// ══════════════════════════════════════════════
+function passOpaque(src) {
+  const rn  = () => (Math.random()*99999|0)+1;
+  const rn2 = () => (Math.random()*255|0);
+  const ops = [
+    () => `if(${rn()}==${rn()})then end`,
+    () => `do local _a=${rn()} _a=_a+0 end`,
+    () => `if(math.abs(${rn()})==${rn()})then end`,
+    () => `do local _a=${rn()}+${rn()} _a=_a*1 end`,
+    () => `do local _a=math.floor(${rn()}+0)end`,
+    () => `if((${rn()}+${rn2()})==(${rn2()}+${rn()}))then end`,
+    () => `do local _a=${rn()} _a=math.max(_a,_a)end`,
+    () => `if(${rn()}~=${rn()+1})then end`,
+  ];
+  const lines = src.split('\n');
+  const out = [];
+  let depth = 0, braces = 0;
+  for (let idx = 0; idx < lines.length; idx++) {
+    out.push(lines[idx]);
+    const safe = braces === 0 && isSafeInjectAt(lines, idx, depth);
+    depth += lineDepthChange(lines[idx]);
+    braces = Math.max(0, braces + lineBraceChange(lines[idx]));
+    if (!safe) continue;
+    if (Math.random() > 0.72) continue;
+    out.push(ops[Math.random()*ops.length|0]());
+  }
+  return out.join('\n');
+}
+
+// ══════════════════════════════════════════════
+//  PASS: API Name Obfuscation
+// ══════════════════════════════════════════════
+const API_NAMES_LIST = [
+  'print','warn','error','assert','pcall','xpcall',
+  'pairs','ipairs','next','select','type','tostring','tonumber',
+  'rawget','rawset','rawequal','rawlen','setmetatable','getmetatable',
+  'require','load','loadstring','collectgarbage','unpack',
+  'coroutine','string','table','math','os','bit32','utf8',
+  'game','workspace','task','wait','spawn','delay','tick',
+  'Instance','Vector3','Vector2','CFrame','Color3','BrickColor',
+  'UDim','UDim2','Enum','TweenInfo','typeof','newproxy'
+];
+
+function passAPINames(toks, dsV) {
+  const used = new Set();
+  for (const t of toks)
+    if (t.t === TK.ID && API_NAMES_LIST.includes(t.v)) used.add(t.v);
+  if (!used.size) return [toks, ''];
+
+  const apiMap = new Map();
+  let idx = 0;
+  for (const name of used) apiMap.set(name, ++idx);
+
+  const gV   = mkSN();  // safe name, no collision with user var renames
+  const envV = mkSN();
+  // Use load() for global lookup — Roblox-compatible (works even when _G doesn't have globals)
+  // load("return pairs")() resolves globals correctly in any Luau environment
+  const ldV = mkSN();
+  let header =
+    `local ${ldV}=load or loadstring\n` +
+    `local ${gV}={}\n`;
+
+  for (const [name, i] of apiMap) {
+    const K = (Math.random()*200|0)+10;
+    const M = ROLL_MULS[Math.random()*ROLL_MULS.length|0];
+    const bytes = Array.from(name).map(c => c.charCodeAt(0));
+    const decodeCall = `${dsV}({${K},${M},${rollEnc(bytes,K,M).join(',')}})`;
+    // load("return " .. name)() looks up the global in the actual Lua environment
+    // This works in Roblox, standard Lua 5.1, and Luau
+    header += `do local _f=${ldV}("return "..(${decodeCall})) ${gV}[${i}]=_f and _f() end\n`;
+  }
+
+  const res = [];
+  for (let i = 0; i < toks.length; i++) {
+    const tok = toks[i];
+    if (tok.t !== TK.ID || !apiMap.has(tok.v)) { res.push(tok); continue; }
+
+    // Skip if PRECEDED by . or :
+    let p = i - 1;
+    while (p >= 0 && toks[p].t === TK.WS) p--;
+    if (p >= 0 && toks[p].t === TK.OP && (toks[p].v === '.' || toks[p].v === ':')) {
+      res.push(tok); continue;
+    }
+    // Skip if FOLLOWED by . or : (used as namespace/library: string.format, math.floor)
+    let nx = i + 1;
+    while (nx < toks.length && toks[nx].t === TK.WS) nx++;
+    if (nx < toks.length && toks[nx].t === TK.OP && (toks[nx].v === '.' || toks[nx].v === ':')) {
+      res.push(tok); continue;
+    }
+    // Skip if used as a table key ({print = ...})
+    if (p >= 0 && toks[p].t === TK.OP && (toks[p].v === '{' || toks[p].v === ',')) {
+      if (nx < toks.length && toks[nx].t === TK.OP && toks[nx].v === '=') {
+        res.push(tok); continue;
+      }
+    }
+    res.push({ t: TK.OP, v: `${gV}[${apiMap.get(tok.v)}]` });
+  }
+  return [res, header];
+}
+
+// ══════════════════════════════════════════════
+//  PASS: AUTO WEBHOOK PROTECT — v34 Ultra
+//
+//  Strategy:
+//  ① URL never appears complete — split into N random chunks
+//     each chunk independently XOR-encoded with different keys
+//  ② Chunks stored in SEPARATE local variables, not a table
+//     (table iteration is easy to intercept)
+//  ③ Assembly happens inside a pcall closure that:
+//     - Checks game.PlaceId is numeric (fails in fake envs)
+//     - Checks HttpService actually exists
+//     - Assembles URL from parts, sends, IMMEDIATELY nils all parts
+//  ④ 1000 fake webhooks injected as noise
+//  ⑤ Chunk variables renamed with mkSN() — no pattern
+//  ⑥ Silent fail: if any check fails, does nothing (no error)
+// ══════════════════════════════════════════════
+function passAutoWebhook(src) {
+  const webhookRe = /https:\/\/discord(?:app)?\.com\/api\/webhooks\/\d+\/[\w\-]+/g;
+  const found = [...new Set(src.match(webhookRe) || [])];
+  if (!found.length) return src;
+
+  let injectHeader = '';
+  const replacements = new Map();
+
+  for (const url of found) {
+    const bytes = strToUTF8(url);
+
+    // ── Split URL into 6-9 random-length chunks ──
+    const numChunks = (Math.random()*4|0) + 6;
+    const chunkSizes = [];
+    let remaining = bytes.length;
+    for (let i = 0; i < numChunks - 1; i++) {
+      const minSize = 1;
+      const maxSize = Math.floor(remaining / (numChunks - i));
+      const size = (Math.random() * (maxSize - minSize + 1) | 0) + minSize;
+      chunkSizes.push(size);
+      remaining -= size;
+    }
+    chunkSizes.push(remaining);
+
+    // ── Encode each chunk with independent keys ──
+    const chunkVars = [];
+    let offset = 0;
+    let chunkDefs = '';
+
+    for (const sz of chunkSizes) {
+      const chunk = bytes.slice(offset, offset + sz);
+      offset += sz;
+
+      const K = (Math.random()*200|0) + 20;
+      const M = ROLL_MULS[Math.random()*ROLL_MULS.length|0];
+
+      // XOR encode
+      const enc = [];
+      let k = K;
+      for (let i = 0; i < chunk.length; i++) {
+        enc.push((chunk[i] ^ k) & 0xFF);
+        k = (k * M + (i + 5)) % 256;
+      }
+
+      const vChunk = mkSN();
+      const vK = mkSN(), vM2 = mkSN(), vR = mkSN(), vI = mkSN();
+      const vBx = mkSN();
+      chunkVars.push(vChunk);
+
+      chunkDefs +=
+        `local ${vChunk}=function()\n` +
+        `local ${vBx}=bit32 and bit32.bxor or function(a,b)local s,v=1,0 while a>0 or b>0 do ` +
+        `local ra,rb=a%2,b%2 if ra~=rb then v=v+s end ` +
+        `a,b,s=(a-ra)/2,(b-rb)/2,s*2 end return v end\n` +
+        `local ${vK},${vM2},${vR}=${K},${M},{}\n` +
+        `for ${vI}=1,${enc.length} do\n` +
+        `${vR}[${vI}]=string.char(${vBx}({${enc.join(',')}}[${vI}],${vK}%256))\n` +
+        `${vK}=(${vK}*${vM2}+(${vI}+4))%256\n` +
+        `end\n` +
+        `return table.concat(${vR})\n` +
+        `end\n`;
+    }
+
+    // ── Send function: assemble + send + nil immediately ──
+    const vSend = mkSN(), vHS = mkSN(), vURL = mkSN();
+    const vP1 = mkSN(), vP2 = mkSN(), vOK = mkSN();
+    const assembleExpr = chunkVars.map(v => `${v}()`).join('..');
+
+    const sendFn =
+      `local ${vSend}=function(payload)\n` +
+      `pcall(function()\n` +
+      // Verify we're in real Roblox (PlaceId is a real number)
+      `if type(game) ~= "userdata" then return end\n` +
+      `if type(game.PlaceId) ~= "number" then return end\n` +
+      `if game.PlaceId == 0 then return end\n` +
+      // Get HttpService
+      `local ${vOK},${vHS}=pcall(function()return game:GetService("HttpService")end)\n` +
+      `if not ${vOK} or not ${vHS} then return end\n` +
+      // Assemble URL from chunk functions, send, never store full URL in a variable
+      `local ${vURL}=${assembleExpr}\n` +
+      `pcall(function()${vHS}:PostAsync(${vURL},payload,Enum.HttpContentType.ApplicationJson)end)\n` +
+      `${vURL}=nil\n` +  // nil immediately after use
+      `end)\n` +
+      `end\n`;
+
+    // Nil all chunk functions after sendFn is defined
+    const nilChunks = chunkVars.map(v => `${v}=nil`).join(' ');
+
+    // ── 1000 fake decoys ──
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-';
+    let fakes = '';
+    for (let f = 0; f < 1000; f++) {
+      const fid = String(Math.floor(Math.random()*9e17+1e17));
+      const ftok = Array.from({length:68}, () => chars[Math.random()*chars.length|0]).join('');
+      const fv = mkSN();
+      fakes += `local ${fv}="https://discord.com/api/webhooks/${fid}/${ftok}"\n`;
+    }
+
+    injectHeader += fakes + chunkDefs + sendFn + nilChunks + '\n';
+    replacements.set(url, `${vSend}`);
+  }
+
+  // Replace URL strings in source with the send function reference
+  let result = src;
+  for (const [url, fn] of replacements) {
+    // Replace both quoted forms
+    result = result.split(`"${url}"`).join(fn);
+    result = result.split(`'${url}'`).join(fn);
+    result = result.split(url).join(fn);
+  }
+
+  return injectHeader + result;
+}
+
+
+// ══════════════════════════════════════════════
+//  PASS: VM WRAPPER — v38 Stable
+//
+//  Encoding: UTF-8 → base-85 (reliable, no XOR issues)
+//  Payload: split into 5 random segments (anti-literal)
+//  Protection: 15-check anti-tamper (skip-offset corrupt)
+//  Anti-dump: nil payload + decoded string after load
+//  Junk: 1500 lines of dead code (encrypted inside VM)
+// ══════════════════════════════════════════════
+function passVM(src) {
+  const SIG  = rh(6).toUpperCase();
+  const skip = SIG.length + 1; // = 7
+
+  // ── Base-85 encode (UTF-8 bytes, no pre-scramble) ──
+  const srcBytes = strToUTF8(src);
+  const padded   = [...srcBytes];
+  while (padded.length % 4 !== 0) padded.push(32);
+
+  let b85 = '';
+  for (let i = 0; i < padded.length; i += 4) {
+    const L = padded[i] + padded[i+1]*256 + padded[i+2]*65536 + padded[i+3]*16777216;
+    if (L === 0) { b85 += 'z'; continue; }
+    let n = L;
+    const c1 = 33 + Math.floor(n/52200625); n %= 52200625;
+    const c2 = 33 + Math.floor(n/614125);   n %= 614125;
+    const c3 = 33 + Math.floor(n/7225);     n %= 7225;
+    const c4 = 33 + Math.floor(n/85);       n %= 85;
+    const c5 = 33 + n;
+    b85 += String.fromCharCode(c1, c2, c3, c4, c5);
+  }
+
+  const fullPayload = SIG + b85;
+
+  // ── Split into 5 segments ──
+  const pLen = fullPayload.length;
+  const cuts = [0, pLen];
+  while (cuts.length < 6) {
+    const c = (Math.random() * pLen * 0.6 + pLen * 0.2) | 0;
+    if (!cuts.includes(c)) cuts.push(c);
+  }
+  cuts.sort((a,b)=>a-b);
+  const segs = [];
+  for (let i = 0; i < 5; i++) segs.push(fullPayload.slice(cuts[i], cuts[i+1]));
+
+  const safeBracket = s => {
+    let n = 2; while (s.includes(']'+'='.repeat(n)+']')) n++; return n;
+  };
+  const brackets = segs.map(s => safeBracket(s));
+  const LS = i => '[' + '='.repeat(brackets[i]) + '[';
+  const LE = i => ']' + '='.repeat(brackets[i]) + ']';
+
+  // ── Variable names ──
+  const V = mkSN;
+  const vChr=V(),vPcall=V(),vByte=V(),vUnpk=V(),vSkip=V(),vChrTbl=V(),vSetmt=V(),vAssrt=V();
+  const vPack=V(),vGsub=V(),vSub=V(),vLoad=V();
+  const vSeg=V(),vDecode=V(),vDecTbl=V(),vStr=V(),vFn=V(),vErr=V(),vOk=V();
+  const vN1=V(),vN2=V(),vN3=V(),vN4=V(),vN5=V(),vN6=V(),vN7=V(),vN8=V();
+  const vD1=V(),vD2=V(),vD3=V(),vD4=V();
+  const sig = rh(14).toUpperCase();
+
+  // ── 1500-line junk (dead code, encrypted inside VM) ──
+  const junkLines = [];
+  const junkNames = Array.from({length:120}, mkSN);
+  const junkStrs  = ['service','player','value','result','data','config',
+    'handle','state','timer','index','cache','frame','mode','flag'];
+  const junkMath  = () => {
+    const a = (Math.random()*899|0)+100;
+    const b = (Math.random()*(a-1)|0)+1;
+    return Math.random()>0.5 ? `${a}+${b}` : `${a}-${b}`;
+  };
+  const junkStr = () => {
+    const s = junkStrs[Math.random()*junkStrs.length|0];
+    return `"${s}_${(Math.random()*999|0)+1}"`;
+  };
+  for (let j = 0; j < 1500; j++) {
+    const v = junkNames[j % junkNames.length];
+    switch(j % 10) {
+      case 0: junkLines.push(`local ${v}=math.floor(${junkMath()})`); break;
+      case 1: junkLines.push(`local ${v}=tostring(${junkMath()})`); break;
+      case 2: junkLines.push(`local ${v}=${junkStr()}`); break;
+      case 3: junkLines.push(`local ${v}=string.len(${junkStr()})`); break;
+      case 4: junkLines.push(`local ${v}=string.rep(${junkStr()},2)`); break;
+      case 5: junkLines.push(`local ${v}=math.max(${junkMath()},${junkMath()})`); break;
+      case 6: junkLines.push(`local ${v}={${Array.from({length:6},()=>Math.random()*255|0).join(',')}}`); break;
+      case 7: junkLines.push(`local ${v}=string.char(${Array.from({length:4},()=>Math.random()*89|0+33).join(',')})`); break;
+      case 8: junkLines.push(`local ${v}=math.abs(${junkMath()})`); break;
+      case 9: junkLines.push(`local ${v}=math.floor(${junkMath()}+0.5)`); break;
+    }
+  }
+
+  // ── Anti-tamper: 15 checks, corrupt skip on fail ──
+  const NA=(Math.random()*150|0)+30, NB=(Math.random()*200|0)+50,
+        NC=(Math.random()*170|0)+40, ND=(Math.random()*220|0)+60,
+        NE=(Math.random()*160|0)+35, NF=(Math.random()*190|0)+45,
+        NG=(Math.random()*175|0)+55, NH=(Math.random()*210|0)+65;
+
+  const checks =
+    `do local ${vN1}=math.abs(-9);if ${vN1}~=9 then ${vSkip}=${vSkip}+${NA} end end;` +
+    `do local ${vN2}=type("x");if ${vN2}~="string" then ${vSkip}=${vSkip}+${NB} end end;` +
+    `do local ${vN3}=select("#",1,2,3,4);if ${vN3}~=4 then ${vSkip}=${vSkip}+${NC} end end;` +
+    `do local ${vN4}=tostring(nil);if ${vN4}~="nil" then ${vSkip}=${vSkip}+${ND} end end;` +
+    `do local ${vN5}=tostring(false);if ${vN5}~="false" then ${vSkip}=${vSkip}+${NE} end end;` +
+    `do local ${vN6}=string.byte("M",1);if ${vN6}~=77 then ${vSkip}=${vSkip}+${NF} end end;` +
+    `do local ${vN7}=string.char(88);if ${vN7}~="X" then ${vSkip}=${vSkip}+${NG} end end;` +
+    `do local ${vN8},${vN1}=pcall(math.abs,-3);if not ${vN8} or ${vN1}~=3 then ${vSkip}=${vSkip}+${NH} end end;` +
+    `do local ${vN2}=math.floor(3.9);if ${vN2}~=3 then ${vSkip}=${vSkip}+${NA} end end;` +
+    `do local ${vN3}=math.floor(math.pi*1e4);if ${vN3}~=31415 then ${vSkip}=${vSkip}+${NB} end end;` +
+    `do local ${vN4}=string.len("LuaShield");if ${vN4}~=9 then ${vSkip}=${vSkip}+${NC} end end;` +
+    `do local ${vN5}=table.concat({"a","b","c"});if ${vN5}~="abc" then ${vSkip}=${vSkip}+${ND} end end;` +
+    `do local ${vN6},${vN7}=string.gsub("xxxx","x","y");if ${vN6}~="yyyy" or ${vN7}~=4 then ${vSkip}=${vSkip}+${NE} end end;` +
+    `do if typeof then local ${vN8}=typeof(Vector3.new());if ${vN8}~="Vector3" then ${vSkip}=${vSkip}+${NF} end end end;` +
+    `do if game then local ${vN1}=type(game);if ${vN1}~="userdata" then ${vSkip}=${vSkip}+${NG} end end end;`;
+
+  // ── Decoder ──
+  const decoder =
+    `local ${vDecode}=function(${vStr})` +
+    `${vStr}=${vSub}(${vStr},${vSkip});` +
+    `${vStr}=${vGsub}(${vStr},"z","!!!!!");` +
+    `return ${vGsub}(${vStr},".....",${vSetmt}({},{__index=function(${vDecTbl},_)` +
+    `local p,b,d,t,i=${vByte}(_,1,5);` +
+    `local L=(i-33)+(t-33)*85+(d-33)*7225+(b-33)*614125+(p-33)*52200625;` +
+    `d=${vPack}("<I4",L);${vDecTbl}[_]=d;return d;` +
+    `end})) end;`;
+
+  // ── Execute (anti-dump) ──
+  const execute =
+    `local ${vSeg}=${segs.map((s,i)=>`${LS(i)}${s}${LE(i)}`).join('..')};` +
+    `local ${vStr}=${vDecode}(${vSeg});` +
+    `${vSeg}=nil;` +
+    `local ${vFn},${vErr}=${vLoad}(${vStr});` +
+    `${vStr}=nil;` +
+    `if not ${vFn} then error(tostring(${vErr})) end;` +
+    `local ${vOk},${vErr}=${vPcall}(${vFn});` +
+    `if not ${vOk} then error(tostring(${vErr})) end;`;
+
+  // Wrap every 40 locals in do...end to stay under Lua's 200-local-per-chunk limit
+  const JUNK_BLOCK = 40;
+  let deadParts = [];
+  for (let i = 0; i < junkLines.length; i += JUNK_BLOCK) {
+    const block = junkLines.slice(i, i + JUNK_BLOCK);
+    deadParts.push('do ' + block.join(';') + ' end');
+  }
+  const dead = deadParts.join(';') + ';' +
+    `local ${vD1}=0;local ${vD2}="";local ${vD3}=0;local ${vD4}={};`;
+
+  return (
+    `--[[${sig}]]` +
+    `return(function()` +
+    `local ${vChr},${vPcall},${vByte},${vUnpk},${vSkip},${vChrTbl},${vSetmt},${vAssrt},${vPack}=` +
+    `string.char,pcall,string.byte,unpack or table.unpack,${skip},{},setmetatable,assert,string.pack;` +
+    `for _=0,255 do ${vChrTbl}[_]=${vChr}(_) end;` +
+    `local _,${vLoad}={[0]=1,2,4,8,16,32,64,128,256,512},loadstring or load;` +
+    `${vChrTbl}=tostring;` +
+    `local ${vPack},${vGsub},${vSub}=string.pack,string.gsub,string.sub;` +
+    dead + checks + decoder + execute +
+    `end)()`
+  );
+}
+
+// ══════════════════════════════════════════════
+//  MAIN RUNNER
+// ══════════════════════════════════════════════
+function runObf() {
+  const src = srcEl.value.trim();
+  if (!src) { lg('Please enter source code first', 'warn'); return; }
+
+  logEl.innerHTML = ''; logEl.classList.add('show');
+  document.getElementById('stats').classList.remove('show');
+  document.getElementById('btnCopy').disabled = true;
+  document.getElementById('btnDl').disabled   = true;
+  document.getElementById('btnRun').disabled  = true;
+
+  const PASSES = parseInt(document.getElementById('passes').value);
+  const doCom  = isOn('t-com');
+  const doStr  = isOn('t-str');
+  const doAPI  = isOn('t-api');
+  const doNum  = isOn('t-num');
+  const doVar  = isOn('t-var');
+  const doJnk  = isOn('t-jnk');
+  const doVM   = isOn('t-vm');
+
+  const origSz = new Blob([src]).size;
+  let totalStr = 0, totalVar = 0, totalJnk = 0;
+  _ns = (Math.random()*0xFFFFFFF|0)+1;
+
+  // Shared rolling-XOR decoder function name (generated once)
+  const dsVar = mkSN(); // safe: won't conflict with passRename's I/l names
+  let apiHeader = '';   // API name table Lua code
+  let decoderLua = ''; // _ds decoder Lua code
+
+  try {
+    lg('Tokenizing...', 'info');
+    setP(5, 'Tokenizing...');
+    let toks = tokenize(src);
+
+    for (let pass = 1; pass <= PASSES; pass++) {
+      lg(`─── Pass ${pass}/${PASSES} ───`, 'info');
+
+      // Step 1: Rename local variables (only on first pass)
+      // Rename vars — disabled when VM is on to prevent closure/upvalue issues
+      // in complex scripts with _G shared state, closures across multiple events, etc.
+      // Double VM wrap (on MEDIUM+) compensates for deobf resistance.
+      if (doVar && pass === 1 && !doVM) {
+        setP(12 + pass*8, `[${pass}] Renaming vars...`);
+        const [t2, cnt] = passRename(toks);
+        toks = t2; totalVar = cnt;
+      }
+
+      // Step 2: API name obfuscation (only on first pass, needs dsVar)
+      if (doAPI && pass === 1) {
+        setP(20 + pass*6, `[${pass}] Encoding API names...`);
+        const [t2, hdr] = passAPINames(toks, dsVar);
+        toks = t2; apiHeader = hdr;
+      }
+
+      // Step 3: String encoding → rolling XOR _ds(...)
+      // Skip inner string encoding when VM wrap is on — VM already encrypts everything.
+      // Inner encoding is redundant and risks breaking UI comparison strings like "確定".
+      if (doStr && !doVM) {
+        setP(28 + pass*8, `[${pass}] Encoding strings (rolling XOR)...`);
+        const [t3, cnt] = passStrings(toks, dsVar);
+        toks = t3; totalStr += cnt;
+      } else if (doStr && doVM) {
+      }
+
+      // Step 4: Number encoding
+      // Skip number encoding when VM is on — VM encrypts everything, number encoding can
+      // break Roblox API calls that expect exact integer/number values
+      if (doNum && !doVM) {
+        setP(42 + pass*6, `[${pass}] Encoding numbers...`);
+        toks = passNumbers(toks);
+      }
+
+      // Re-tokenize for multi-pass (only needed when not VM-only mode)
+      if (pass < PASSES && !doVM) {
+        setP(50 + pass*6, `[${pass}] Re-tokenizing...`);
+        toks = tokenize(toks2s(toks));
+      }
+    }
+
+    // Strip comments
+    if (doCom) {
+      setP(68, 'Stripping comments...');
+      toks = passComments(toks);
+    }
+
+    // Reconstruct source string
+    let str = toks2s(toks);
+
+    // Opaque predicates + junk injection (skip when VM is on — VM already hides everything,
+    // and injection risks breaking complex scripts with nested tables/functions)
+    if (doJnk && !doVM) {
+      setP(78, 'Injecting opaque predicates & junk...');
+      str = passOpaque(str);
+      const density = 0.06 + PASSES * 0.03;
+      const [s2, cnt] = passJunk(str, density);
+      str = s2; totalJnk = cnt;
+    } else if (doJnk && doVM) {
+    }
+
+    // Prepend: _ds decoder + API name table (only needed when strings/APIs were encoded)
+    const needsDecoder = (doStr && !doVM) || doAPI;
+    if (needsDecoder) {
+      decoderLua = mkDS(dsVar);
+      str = decoderLua + apiHeader + str;
+    }
+
+    // Auto protection injection (runs BEFORE VM so it's encrypted inside)
+    if (isOn('t-prot')) {
+      const protOpts = {
+        antiHook: true,
+        antiHTTP: true,
+        antiEnv:  true,
+        antiDeobf: false, // skip deobf crash - can confuse Roblox's own parser
+        autoWebhook: false, // handled separately below
+        action: 'return',
+      };
+      const protResult = buildProtectionCode(str, protOpts);
+      str = protResult.src;
+      if (protResult.code.trim()) {
+        str = protResult.code + '\n' + str;
+      }
+    }
+
+    // Auto webhook protection (before VM so URL is inside encrypted payload)
+    if (isOn('t-wha')) {
+      const whCount = (src.match(/https:\/\/discord(?:app)?\.com\/api\/webhooks\/\d+\/[\w\-]+/g)||[]).length;
+      if (whCount > 0) {
+        str = passAutoWebhook(str);
+      }
+    }
+
+    // VM wrap: base-85 encoding
+    if (doVM) {
+      setP(88, 'Applying VM wrap (base-85)...');
+      lg('VM Protection', 'info');
+      str = passVM(str);
+      // MEDIUM (2 passes): double wrap — attacker must decode 2 VM layers
+      // HEAVY  (3 passes): triple wrap — 3 layers, each with different keys
+      if (PASSES >= 2) {
+        setP(93, 'Applying VM wrap layer 2...');
+        str = passVM(str);
+      }
+      if (PASSES >= 3) {
+        setP(97, 'Applying VM wrap layer 3...');
+        str = passVM(str);
+      }
+    }
+
+    setP(100, 'Obfuscate Completed!');
+    outEl.value = str;
+    updLC();
+
+    const outSz = new Blob([str]).size;
+    const st = document.getElementById('stats');
+    st.classList.add('show');
+    document.getElementById('s-in').textContent  = fmtB(origSz);
+    document.getElementById('s-out').textContent = fmtB(outSz);
+
+    lg('═══ Obfuscate Completed ═══', 'ok');
+    document.getElementById('btnCopy').disabled = false;
+    document.getElementById('btnDl').disabled   = false;
+  } catch(err) {
+    lg('ERROR: ' + err.message, 'warn');
+    setP(0, 'Error occurred');
+    console.error(err);
+  }
+  document.getElementById('btnRun').disabled = false;
+}
+
+// ══════════════════════════════════════════════
+//  FAKE WEBHOOK GENERATOR (unchanged)
+// ══════════════════════════════════════════════
+
+// ══════════════════════════════════════════════
+//  PROTECTION INJECTION ENGINE
+// ══════════════════════════════════════════════
+
+// Build the protection code that gets injected at the top of the source
+// (before VM wrap, so it's encrypted inside the VM)
+function buildProtectionCode(src, opts) {
+  const action = opts.action || 'return';
+
+  // Trigger action
+  const mkTrigger = (label) => {
+    if (action === 'return')  return `do return end`;
+    if (action === 'error')   return `do error("") end`;
+    if (action === 'loop')    return `do local _x=0 while true do _x=_x+1 end end`;
+    return `do return end`;
+  };
+
+  const V = () => mkSN(); // safe variable names
+
+  let code = ``;
+  // All protection blocks are wrapped in pcall so they NEVER crash the main script,
+  // even if _G is nil or APIs behave unexpectedly in the loadstring environment.
+
+  // ── ANTI-HOOK ────────────────────────────────
+  if (opts.antiHook) {
+    const vHF = V(), vRC = V(), vCF = V(), vNC = V(), vEnvT = V();
+    code += `pcall(function()` +
+    `local ${vEnvT}=getfenv and getfenv() or _G or {}` +
+    `local ${vHF}=rawget(${vEnvT},"hookfunction")` +
+    `local ${vRC}=rawget(${vEnvT},"replaceclosure")` +
+    `local ${vCF}=rawget(${vEnvT},"clonefunction")` +
+    `local ${vNC}=rawget(${vEnvT},"newcclosure")` +
+    `if ${vHF}~=nil or ${vRC}~=nil or ${vCF}~=nil or ${vNC}~=nil then ` +
+    `${mkTrigger('anti-hook')} end ` +
+    `end)\n`;
+  }
+
+  // ── ANTI-HTTP SPY ─────────────────────────────
+  if (opts.antiHTTP) {
+    const vHS = V(), vOK = V(), vFN = V(), vT = V(), vSpy = V(), vEnvT = V();
+    code += `pcall(function()` +
+    `local ${vEnvT}=getfenv and getfenv() or _G or {}` +
+    `local ${vSpy}={"http_spy","fluxus","SENTINEL_V2","KRNL_LOADED","rconsoleprint"}` +
+    `for _,${vT} in ipairs(${vSpy}) do ` +
+    `if rawget(${vEnvT},${vT})~=nil then ${mkTrigger('anti-http')} end ` +
+    `end ` +
+    `end)\n`;
+  }
+
+  // ── ANTI-ENV LOGGER ───────────────────────────
+  if (opts.antiEnv) {
+    const vA = V(), vB = V(), vC = V(), vD = V(), vE = V(), vF2 = V(), vI = V(), vSeq = V();
+    code += `pcall(function()` +
+    `local ${vA}=string.byte("A",1)` +
+    `if ${vA}~=65 then ${mkTrigger('env-1')} end ` +
+    `local ${vB}=string.char(90)` +
+    `if ${vB}~="Z" then ${mkTrigger('env-2')} end ` +
+    `local ${vC}=table.concat({"x","y","z"})` +
+    `if ${vC}~="xyz" then ${mkTrigger('env-3')} end ` +
+    `local ${vD},${vE}=pcall(error,"_ls_")` +
+    `if ${vD} or not tostring(${vE}):find("_ls_",1,true) then ${mkTrigger('env-4')} end ` +
+    `local ${vSeq},${vI}={7,14,21},0 ` +
+    `for _,_v in ipairs(${vSeq}) do ${vI}=${vI}+_v end ` +
+    `if ${vI}~=42 then ${mkTrigger('env-5')} end ` +
+    `end)\n`;
+  }
+
+  // ── AUTO WEBHOOK PROTECT ──────────────────────
+  // Find webhook URLs in source, encode them with rolling XOR.
+  // Returns modified src with URLs replaced.
+  if (opts.autoWebhook) {
+    const K = (Math.random()*200|0)+10;
+    const M = ROLL_MULS[Math.random()*ROLL_MULS.length|0];
+    // Find all discord webhook URLs
+    const webhookRe = /https:\/\/discord\.com\/api\/webhooks\/[\d]+\/[\w\-]+/g;
+    const found = [];
+    let match;
+    while ((match = webhookRe.exec(src)) !== null) found.push(match[0]);
+    if (found.length > 0) {
+      const uniq = [...new Set(found)];
+      const vDec = V(), vLD = V(), vT = V();
+      let whCode = `\n-- [LuaShield] Protected Webhooks\nlocal ${vLD}=load or loadstring\n`;
+      for (const url of uniq) {
+        const bytes = Array.from(url).map(c => c.charCodeAt(0));
+        const enc = rollEnc(bytes, K, M);
+        const vW = V();
+        whCode += `local ${vW}=${mkSN_decoder(vDec,K,M,enc)}\n`;
+        // Replace URL in source with the variable name
+        src = src.split(url).join(vW);
+      }
+      code = whCode + code;
+    }
+  }
+
+  // ── ANTI-DEOBF CRASH ─────────────────────────
+  // Inserts a string that causes common deobfuscators to crash.
+  // Most deobfuscators use regex/pattern matching on the source;
+  // certain patterns overflow their parsers.
+  if (opts.antiDeobf) {
+    const poison = '--[' + '='.repeat(6) + '[\n' + ']' + '='.repeat(6) + ']';
+    code = `${poison}\n` + code;
+  }
+
+  return { code, src };
+}
+
+// Helper: generate inline rolling-XOR decode call
+function mkSN_decoder(vName, K, M, encBytes) {
+  // Inline mini-decoder using pure-math XOR (no bit32 dependency)
+  const vK = mkSN(), vM2 = mkSN(), vR = mkSN(), vI = mkSN();
+  const vA = mkSN(), vB = mkSN(), vS = mkSN(), vV = mkSN();
+  const xorFn =
+    `local function _xor(a,b)` +
+    `local ${vS},${vV}=1,0` +
+    `while a>0 or b>0 do` +
+    `local ra,rb=a%2,b%2` +
+    `if ra~=rb then ${vV}=${vV}+${vS} end` +
+    `a,b,${vS}=(a-ra)/2,(b-rb)/2,${vS}*2` +
+    `end return ${vV} end `;
+  return `(function()` +
+    xorFn +
+    `local ${vK},${vM2},${vR}=${K},${M},{}` +
+    `local _b={${encBytes.join(',')}}` +
+    `for ${vI}=1,#_b do` +
+    `${vR}[${vI}]=string.char(_xor(_b[${vI}],${vK}%256))` +
+    `${vK}=(${vK}*${vM2}+(${vI}+2))%256` +
+    `end` +
+    `return table.concat(${vR})` +
+    `end)()`;
+}
+
+// ── UI Handlers ──────────────────────────────────
+function getProtOpts() {
+  return {
+    antiHook:   document.getElementById('p-ahook').classList.contains('on'),
+    antiHTTP:   document.getElementById('p-ahttp').classList.contains('on'),
+    autoWebhook:document.getElementById('p-awh').classList.contains('on'),
+    antiEnv:    document.getElementById('p-aenv').classList.contains('on'),
+    antiDeobf:  document.getElementById('p-acrsh').classList.contains('on'),
+    action:     document.getElementById('p-action').value,
+  };
+}
+
+function runProtInject() {
+  const src = document.getElementById('src').value || '-- (來源代碼為空，顯示保護代碼範本)';
+  const opts = getProtOpts();
+  const { code } = buildProtectionCode(src, opts);
+  document.getElementById('prot-out').textContent = code || '-- 所有防護選項皆已關閉';
+}
+
+function copyProtCode() {
+  const t = document.getElementById('prot-out').textContent;
+  navigator.clipboard.writeText(t).then(() => alert('Copied!'));
+}
+
+function generateFakeWH(realUrl, count, keyStrength) {
+  if (!realUrl || !realUrl.startsWith('http')) return '-- 請輸入有效的 webhook URL';
+  count = parseInt(count) || 40;
+  const K1 = (Math.random()*200|0)+10;
+  const K2 = keyStrength === 'single' ? 0 : (Math.random()*50|0)+5;
+  const K3 = keyStrength === 'triple' ? (Math.random()*20|0)+2 : 0;
+  const enc = [];
+  for (let i = 0; i < realUrl.length; i++) {
+    const b = realUrl.charCodeAt(i);
+    let k = (K1 + i*7) % 256;
+    if (K2) k ^= ((i*K2)%256);
+    if (K3) k ^= K3;
+    enc.push(b ^ k);
+  }
+  const fakes = Array.from({length:count}, () => {
+    const id  = String(Math.floor(Math.random()*9e17+1e17));
+    const tok = Array.from({length:68}, () => {
+      const c='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-';
+      return c[Math.random()*c.length|0];
+    }).join('');
+    return `"https://discord.com/api/webhooks/${id}/${tok}"`;
+  });
+  const [vE,vK1,vK2,vK3,vF,vG,vT,vI,vB,vK,vR] = Array.from({length:11},mkN);
+  const sig = rh(14);
+  const ksComment = keyStrength === 'triple' ? '3-layer' : keyStrength === 'double' ? '2-layer' : '1-layer';
+  let decodeBody = `local ${vK}=(${vK1}+(${vI}-1)*7)%256`;
+  if (K2) decodeBody += `\n  ${vK}=bit32.bxor(${vK},(((${vI}-1)*${K2})%256))`;
+  if (K3) decodeBody += `\n  ${vK}=bit32.bxor(${vK},${K3})`;
+  decodeBody += `\n  ${vT}[${vI}]=string.char(bit32.bxor(${vB},${vK}))`;
+  return `--[[\n  LuaShield WebhookGuard | ${sig}\n  ${ksComment} XOR | ${count} decoy webhooks\n  Real URL is XOR-encoded — NOT visible in plaintext\n]]\n\n-- ⚠ Decoy webhooks (${count} fake targets)\nlocal ${vF} = {\n  ${fakes.join(',\n  ')}\n}\n\n-- Real webhook (${ksComment} XOR encoded)\nlocal ${vK1},${K2?`${vK2},`:''}${K3?`${vK3},`:''}${vE} = ${K1},${K2||''}${K2?',':''}${K3||''}${K3?',':''}{${enc.join(',')}}\nlocal function ${vG}()\n  local ${vT},${vI} = {},0\n  for _,${vB} in ipairs(${vE}) do\n    ${vI}=${vI}+1\n    ${decodeBody}\n  end\n  return table.concat(${vT})\nend\n\n-- Usage:\n-- local webhookUrl = ${vG}()\n-- game:GetService("HttpService"):PostAsync(webhookUrl, payload)\n`;
+}
+function whGenerate() {
+  const url   = document.getElementById('wh-real').value.trim();
+  const count = document.getElementById('wh-count').value;
+  const ks    = document.getElementById('wh-ks').value;
+  document.getElementById('wh-out').textContent = generateFakeWH(url, count, ks);
+}
+function whPreview() {}
+function whCopy() {
+  const t = document.getElementById('wh-out').textContent;
+  navigator.clipboard.writeText(t).then(() => alert('Copied!'));
+}
+</script>
+<script>
+function showPage(id, el) {
+  document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+  ['obf','wh','prot'].forEach(p => {
+    const el2 = document.getElementById('pg-'+p);
+    if (el2) el2.style.display = 'none';
+  });
+  if (el) el.classList.add('active');
+  const pg = document.getElementById('pg-'+id);
+  if (pg) pg.style.display = '';
+}
+
+function setUploadTab(mode) {
+  document.getElementById('ut-file').classList.toggle('active', mode==='file');
+  document.getElementById('ut-paste').classList.toggle('active', mode==='paste');
+  document.getElementById('drop').style.display = mode==='file' ? '' : 'none';
+  document.getElementById('paste-area').classList.toggle('active', mode==='paste');
+  // No auto file dialog - user clicks Browse or drags to upload
+}
+
+function setTier(el, val) {
+  document.querySelectorAll('.tier-opt').forEach(t => t.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('passes').value = val;
+}
+
+// Override doClear to also hide output section
+function doClear() {
+  const srcEl = document.getElementById('src');
+  const outEl = document.getElementById('out');
+  const logEl = document.getElementById('log');
+  if (srcEl) srcEl.value = '';
+  if (outEl) outEl.value = '';
+  if (logEl) { logEl.innerHTML = ''; logEl.classList.remove('show'); }
+  const prog = document.getElementById('prog');
+  if (prog) prog.classList.remove('show');
+  const stats = document.getElementById('stats');
+  if (stats) stats.classList.remove('show');
+  const btnCopy = document.getElementById('btnCopy');
+  const btnDl = document.getElementById('btnDl');
+  if (btnCopy) btnCopy.disabled = true;
+  if (btnDl) btnDl.disabled = true;
+  const sec = document.getElementById('out-section');
+  if (sec) sec.style.display = 'none';
+  updLC();
+}
+
+// Override setP to show progress nicely
+function setP(pct, msg) {
+  document.getElementById('prog').classList.add('show');
+  document.getElementById('bar').style.width = pct + '%';
+  document.getElementById('lbl').textContent = msg;
+}
+
+// Show output section when done
+const _origRunObf = runObf;
+
+
+// ══════════════════════════════════════════════
+//  FIREBASE AUTH
+// ══════════════════════════════════════════════
+const firebaseConfig = {
+  apiKey: "AIzaSyCUl3g_vjRuvV7NvWCc7tXu-Rgr1i_iF2Q",
+  authDomain: "luashield-46dad.firebaseapp.com",
+  projectId: "luashield-46dad",
+  storageBucket: "luashield-46dad.firebasestorage.app",
+  messagingSenderId: "559035926209",
+  appId: "1:559035926209:web:19ad43752e8dec40dfb640"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const provider = new firebase.auth.GoogleAuthProvider();
+
+function signInWithGoogle() {
+  auth.signInWithPopup(provider).catch(err => {
+    console.error('Sign-in error:', err);
+  });
+}
+
+function signOut() {
+  auth.signOut();
+}
+
+auth.onAuthStateChanged(user => {
+  const overlay = document.getElementById('auth-overlay');
+  const navUser = document.getElementById('nav-user');
+  if (user) {
+    // Signed in — hide overlay, show user info
+    overlay.style.display = 'none';
+    const initial = (user.displayName || user.email || '?')[0].toUpperCase();
+    navUser.style.display = 'flex';
+    navUser.innerHTML = `
+      <div class="auth-user">
+        ${user.photoURL
+          ? `<img class="auth-avatar" src="${user.photoURL}" referrerpolicy="no-referrer">`
+          : `<div class="auth-avatar-placeholder">${initial}</div>`}
+        <span class="auth-name">${user.displayName || user.email}</span>
+        <button class="btn-signout" onclick="signOut()" title="Sign out">✕</button>
+      </div>`;
+  } else {
+    // Signed out — show overlay
+    overlay.style.display = 'flex';
+    navUser.style.display = 'none';
+    navUser.innerHTML = '';
+  }
+});
+
+</script>
+
+<!-- Auth overlay -->
+<div class="auth-overlay" id="auth-overlay">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" width="22" height="22">
+        <path d="M10 2L3 6v4c0 4 3.5 7.5 7 8 3.5-.5 7-4 7-8V6L10 2z"/>
+      </svg>
+      LuaShield
+    </div>
+    <div class="auth-sub">Advanced Lua Obfuscator — Sign in to continue</div>
+    <button class="btn-google" onclick="signInWithGoogle()">
+      <svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+        <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/>
+        <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/>
+        <path fill="#FBBC05" d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z"/>
+        <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 6.293C4.672 4.166 6.656 3.58 9 3.58z"/>
+      </svg>
+      Continue with Google
+    </button>
+    <div class="auth-divider">Your account is required to use LuaShield</div>
+  </div>
+</div>
+
+</body>
+</html>
