@@ -1451,7 +1451,6 @@ function runObf() {
     lg('Tokenizing...', 'info');
     setP(5, 'Tokenizing...');
     let toks = tokenize(src);
-    lg(`Tokenized: ${toks.length} tokens`, 'ok');
 
     for (let pass = 1; pass <= PASSES; pass++) {
       lg(`─── Pass ${pass}/${PASSES} ───`, 'info');
@@ -1464,7 +1463,6 @@ function runObf() {
         setP(12 + pass*8, `[${pass}] Renaming vars...`);
         const [t2, cnt] = passRename(toks);
         toks = t2; totalVar = cnt;
-        lg(`✓ Renamed ${cnt} vars`, 'ok');
       }
 
       // Step 2: API name obfuscation (only on first pass, needs dsVar)
@@ -1472,8 +1470,6 @@ function runObf() {
         setP(20 + pass*6, `[${pass}] Encoding API names...`);
         const [t2, hdr] = passAPINames(toks, dsVar);
         toks = t2; apiHeader = hdr;
-        if (hdr) lg(`✓ API names encoded (rolling XOR table)`, 'ok');
-        else lg('✓ No API names found to encode', 'ok');
       }
 
       // Step 3: String encoding → rolling XOR _ds(...)
@@ -1483,9 +1479,7 @@ function runObf() {
         setP(28 + pass*8, `[${pass}] Encoding strings (rolling XOR)...`);
         const [t3, cnt] = passStrings(toks, dsVar);
         toks = t3; totalStr += cnt;
-        lg(`✓ Encoded ${cnt} strings`, 'ok');
       } else if (doStr && doVM) {
-        lg(`ℹ String encoding skipped (VM wrap provides full protection)`, 'info');
       }
 
       // Step 4: Number encoding
@@ -1494,7 +1488,6 @@ function runObf() {
       if (doNum && !doVM) {
         setP(42 + pass*6, `[${pass}] Encoding numbers...`);
         toks = passNumbers(toks);
-        lg('✓ Numbers encoded', 'ok');
       }
 
       // Re-tokenize for multi-pass (only needed when not VM-only mode)
@@ -1508,7 +1501,6 @@ function runObf() {
     if (doCom) {
       setP(68, 'Stripping comments...');
       toks = passComments(toks);
-      lg('✓ Comments stripped', 'ok');
     }
 
     // Reconstruct source string
@@ -1522,9 +1514,7 @@ function runObf() {
       const density = 0.06 + PASSES * 0.03;
       const [s2, cnt] = passJunk(str, density);
       str = s2; totalJnk = cnt;
-      lg(`✓ ${cnt} junk lines + opaque predicates injected`, 'ok');
     } else if (doJnk && doVM) {
-      lg('ℹ Junk injection skipped (VM provides full obfuscation)', 'info');
     }
 
     // Prepend: _ds decoder + API name table (only needed when strings/APIs were encoded)
@@ -1532,7 +1522,6 @@ function runObf() {
     if (needsDecoder) {
       decoderLua = mkDS(dsVar);
       str = decoderLua + apiHeader + str;
-      lg('✓ Rolling XOR decoder injected', 'ok');
     }
 
     // Auto protection injection (runs BEFORE VM so it's encrypted inside)
@@ -1549,7 +1538,6 @@ function runObf() {
       str = protResult.src;
       if (protResult.code.trim()) {
         str = protResult.code + '\n' + str;
-        lg('✓ Protection code injected', 'ok');
       }
     }
 
@@ -1558,26 +1546,23 @@ function runObf() {
       const whCount = (src.match(/https:\/\/discord(?:app)?\.com\/api\/webhooks\/\d+\/[\w\-]+/g)||[]).length;
       if (whCount > 0) {
         str = passAutoWebhook(str);
-        lg(`✓ ${whCount} webhook(s) protected (PlaceId-bound key + fake decoys)`, 'ok');
       }
     }
 
     // VM wrap: base-85 encoding
     if (doVM) {
       setP(88, 'Applying VM wrap (base-85)...');
+      lg('VM Protection', 'info');
       str = passVM(str);
-      lg('✓ VM wrap layer 1 applied', 'ok');
       // MEDIUM (2 passes): double wrap — attacker must decode 2 VM layers
       // HEAVY  (3 passes): triple wrap — 3 layers, each with different keys
       if (PASSES >= 2) {
         setP(93, 'Applying VM wrap layer 2...');
         str = passVM(str);
-        lg(`✓ VM wrap layer 2 applied`, 'ok');
       }
       if (PASSES >= 3) {
         setP(97, 'Applying VM wrap layer 3...');
         str = passVM(str);
-        lg(`✓ VM wrap layer 3 applied`, 'ok');
       }
     }
 
