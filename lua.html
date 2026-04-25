@@ -311,8 +311,271 @@ textarea::placeholder { color: var(--dim); }
   font-size: 13px; padding: 8px 12px; border-radius: 8px;
   outline: none; cursor: pointer; transition: border-color .15s;
 }
+
+/* ── Auth overlay ── */
+.auth-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+}
+.auth-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 16px; padding: 48px 40px;
+  width: 100%; max-width: 400px; text-align: center;
+}
+.auth-logo {
+  font-size: 22px; font-weight: 700; color: var(--gold);
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  margin-bottom: 8px;
+}
+.auth-sub { font-size: 13px; color: var(--muted); margin-bottom: 32px; }
+.btn-google {
+  width: 100%; padding: 12px 20px;
+  background: #fff; color: #1f1f1f;
+  border: none; border-radius: 10px; cursor: pointer;
+  font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 600;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  transition: all .15s; margin-bottom: 16px;
+}
+.btn-google:hover { background: #f0f0f0; }
+.btn-google svg { width: 18px; height: 18px; flex-shrink: 0; }
+.auth-divider {
+  font-size: 11px; color: var(--muted); margin: 4px 0 20px;
+}
+.auth-user {
+  display: flex; align-items: center; gap: 10px;
+  padding: 6px 14px 6px 6px;
+  border-radius: 20px; background: var(--bg3);
+  border: 1px solid var(--border);
+}
+.auth-avatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  object-fit: cover;
+}
+.auth-avatar-placeholder {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--gold); display: grid; place-items: center;
+  font-size: 12px; font-weight: 700; color: #000;
+}
+.auth-name { font-size: 13px; font-weight: 500; max-width: 120px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.btn-signout {
+  font-size: 11px; color: var(--muted); background: none; border: none;
+  cursor: pointer; padding: 2px 6px; border-radius: 4px; margin-left: 2px;
+  transition: color .15s;
+}
+.btn-signout:hover { color: var(--red); }
+
+/* ── Profile dropdown ── */
+.profile-btn {
+  height: 40px; border-radius: 20px;
+  background: var(--bg3); border: 1px solid var(--border);
+  cursor: pointer; display: flex; align-items: center; gap: 8px;
+  padding: 0 16px 0 12px;
+  transition: all .15s; position: relative;
+}
+.profile-btn:hover { border-color: var(--gold); }
+.profile-btn svg { width: 18px; height: 18px; color: var(--gold); flex-shrink: 0; }
+.profile-btn img { display: none; }
+.profile-name {
+  font-size: 14px; font-weight: 500; color: var(--text);
+  max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.profile-dropdown {
+  position: absolute; top: calc(100% + 12px); right: 0;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 16px; padding: 0; width: 360px;
+  box-shadow: 0 12px 40px rgba(0,0,0,.7);
+  z-index: 200; overflow: hidden;
+  opacity: 0; pointer-events: none; transform: translateY(-8px);
+  transition: opacity .18s, transform .18s;
+}
+.profile-dropdown.open {
+  opacity: 1; pointer-events: all; transform: translateY(0);
+}
+.pd-header {
+  padding: 24px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 16px;
+}
+.pd-avatar {
+  width: 56px; height: 56px; border-radius: 50%;
+  background: var(--gold); display: grid; place-items: center;
+  font-size: 22px; font-weight: 700; color: #000; flex-shrink: 0;
+  overflow: hidden;
+}
+.pd-avatar img { width: 56px; height: 56px; object-fit: cover; }
+.pd-info { flex: 1; min-width: 0; }
+.pd-name { font-weight: 700; font-size: 17px; margin-bottom: 3px; }
+.pd-email { font-size: 13px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pd-joined { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+.pd-field { padding: 20px 24px; border-bottom: 1px solid var(--border); }
+.pd-field label { font-size: 12px; color: var(--muted); letter-spacing: .5px; display: block; margin-bottom: 8px; font-weight: 600; }
+.pd-input-row { display: flex; gap: 8px; }
+.pd-input {
+  flex: 1; background: var(--bg2); border: 1px solid var(--border2);
+  color: var(--text); font-family: 'Outfit', sans-serif;
+  font-size: 14px; padding: 10px 14px; border-radius: 9px; outline: none;
+  transition: border-color .15s;
+}
+.pd-input:focus { border-color: var(--gold); }
+.pd-save {
+  padding: 10px 18px; background: var(--gold); color: #000;
+  border: none; border-radius: 9px; cursor: pointer;
+  font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 700;
+  transition: background .15s; white-space: nowrap;
+}
+.pd-save:hover { background: var(--gold3); }
+
+.pd-signout {
+  padding: 18px 24px; display: flex; align-items: center; gap: 12px;
+  cursor: pointer; font-size: 14px; color: var(--muted);
+  transition: all .15s;
+}
+.pd-signout:hover { background: rgba(248,113,113,.08); color: var(--red); }
+.pd-signout svg { width: 16px; height: 16px; }
+
+.pd-toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px 18px; font-size: 13px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.4);
+  opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 9999;
+}
+.pd-toast.show { opacity: 1; }
 .select-styled:focus { border-color: var(--gold); }
+
+/* ── History page ── */
+.hist-toolbar {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 12px; padding: 16px 20px;
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 16px; flex-wrap: wrap;
+}
+.hist-search {
+  flex: 1; min-width: 200px;
+  background: var(--bg2); border: 1px solid var(--border2);
+  color: var(--text); font-family: 'Outfit', sans-serif;
+  font-size: 14px; padding: 9px 14px 9px 38px; border-radius: 8px; outline: none;
+  transition: border-color .15s;
+}
+.hist-search:focus { border-color: var(--gold); }
+.hist-search-wrap { position: relative; flex: 1; min-width: 200px; }
+.hist-search-wrap svg {
+  position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+  width: 15px; height: 15px; color: var(--muted); pointer-events: none;
+}
+.hist-filters { display: flex; gap: 6px; }
+.hist-filter {
+  padding: 8px 16px; border-radius: 8px; cursor: pointer;
+  font-size: 13px; font-weight: 500; border: 1px solid var(--border2);
+  background: transparent; color: var(--muted); transition: all .15s; white-space: nowrap;
+}
+.hist-filter.active { background: var(--gold); color: #000; border-color: var(--gold); }
+.hist-filter:hover:not(.active) { border-color: var(--gold); color: var(--gold); }
+
+.hist-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 12px;
+}
+.hist-count { font-size: 20px; font-weight: 700; color: var(--gold); }
+.hist-count-sub { font-size: 13px; color: var(--muted); margin-top: 2px; }
+.hist-sort { font-size: 12px; color: var(--muted); }
+
+.hist-item {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 10px; padding: 16px 20px;
+  display: flex; align-items: center; gap: 14px;
+  margin-bottom: 10px; transition: border-color .15s;
+}
+.hist-item:hover { border-color: var(--border2); }
+.hist-item.selected { border-color: var(--gold); background: rgba(245,197,66,.04); }
+.hist-checkbox {
+  width: 18px; height: 18px; border-radius: 4px;
+  border: 1.5px solid var(--border2); cursor: pointer;
+  flex-shrink: 0; display: grid; place-items: center; transition: all .15s;
+}
+.hist-checkbox.checked { background: var(--gold); border-color: var(--gold); }
+.hist-checkbox.checked::after { content: '✓'; font-size: 11px; color: #000; font-weight: 700; }
+.hist-file-icon {
+  width: 36px; height: 36px; border-radius: 8px;
+  background: rgba(245,197,66,.12); display: grid; place-items: center; flex-shrink: 0;
+}
+.hist-file-icon svg { width: 18px; height: 18px; color: var(--gold); }
+.hist-info { flex: 1; min-width: 0; }
+.hist-filename { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+.hist-meta { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.hist-meta-dot { width: 3px; height: 3px; border-radius: 50%; background: var(--border2); }
+.hist-arrow { font-size: 11px; color: var(--muted); }
+.badge-completed {
+  display: inline-block; padding: 2px 10px; border-radius: 20px;
+  background: rgba(74,222,128,.15); color: #4ade80;
+  font-size: 11px; font-weight: 600; letter-spacing: .3px;
+}
+.hist-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.hist-action-btn {
+  width: 34px; height: 34px; border-radius: 8px;
+  background: transparent; border: 1px solid var(--border);
+  cursor: pointer; display: grid; place-items: center;
+  color: var(--muted); transition: all .15s;
+}
+.hist-action-btn:hover { border-color: var(--gold); color: var(--gold); }
+.hist-action-btn.del:hover { border-color: var(--red); color: var(--red); }
+.hist-action-btn svg { width: 15px; height: 15px; }
+
+.hist-empty {
+  text-align: center; padding: 60px 20px; color: var(--muted);
+}
+.hist-empty svg { width: 48px; height: 48px; margin: 0 auto 16px; opacity: .3; display: block; }
+.hist-empty-title { font-size: 16px; font-weight: 600; margin-bottom: 6px; color: var(--text); }
+
+/* ── Code viewer modal ── */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 500;
+  background: rgba(0,0,0,.7); backdrop-filter: blur(4px);
+  display: none; align-items: center; justify-content: center; padding: 24px;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 14px; width: 100%; max-width: 900px;
+  max-height: 85vh; display: flex; flex-direction: column;
+}
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 24px; border-bottom: 1px solid var(--border);
+}
+.modal-title { font-size: 16px; font-weight: 700; }
+.modal-close {
+  width: 32px; height: 32px; border-radius: 8px;
+  background: var(--bg3); border: none; cursor: pointer;
+  color: var(--muted); display: grid; place-items: center; transition: all .15s;
+}
+.modal-close:hover { color: var(--text); }
+.modal-tabs { display: flex; gap: 0; padding: 0 24px; border-bottom: 1px solid var(--border); }
+.modal-tab {
+  padding: 12px 20px; font-size: 13px; font-weight: 500;
+  color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; transition: all .15s;
+}
+.modal-tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+.modal-body { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+.modal-code {
+  flex: 1; overflow: auto; padding: 20px 24px;
+  font-family: 'JetBrains Mono', monospace; font-size: 12px;
+  line-height: 1.7; color: var(--text); white-space: pre-wrap; word-break: break-all;
+  background: var(--bg2); margin: 16px; border-radius: 8px;
+}
+.modal-code::-webkit-scrollbar { width: 6px; }
+.modal-code::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+.modal-footer {
+  padding: 16px 24px; border-top: 1px solid var(--border);
+  display: flex; justify-content: flex-end; gap: 8px;
+}
 </style>
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 </head>
 <body>
 
@@ -329,8 +592,13 @@ textarea::placeholder { color: var(--dim); }
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg>
       Upload
     </a>
+    <a class="nav-link" onclick="showPage('hist',this)">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="8" cy="8" r="6"/><path d="M8 5v3.5l2.5 1.5"/></svg>
+      History
+    </a>
 
   </div>
+  <div id="nav-user" style="display:none"></div>
 </nav>
 
 <!-- ═══ UPLOAD / OBFUSCATE PAGE ═══ -->
@@ -541,10 +809,27 @@ fileEl.addEventListener('change', e => loadF(e.target.files[0]));
 dropEl.addEventListener('dragover', e => { e.preventDefault(); dropEl.classList.add('ov'); });
 dropEl.addEventListener('dragleave', () => dropEl.classList.remove('ov'));
 dropEl.addEventListener('drop', e => { e.preventDefault(); dropEl.classList.remove('ov'); loadF(e.dataTransfer.files[0]); });
+
+// Also support drag-and-drop onto the textarea (paste mode)
+srcEl.addEventListener('dragover', e => { e.preventDefault(); srcEl.style.borderColor = 'var(--gold)'; });
+srcEl.addEventListener('dragleave', () => { srcEl.style.borderColor = ''; });
+srcEl.addEventListener('drop', e => {
+  e.preventDefault();
+  srcEl.style.borderColor = '';
+  const f = e.dataTransfer.files[0];
+  if (f) loadF(f);
+});
+
 function loadF(f) {
   if (!f) return;
   const r = new FileReader();
-  r.onload = e => { srcEl.value = e.target.result; updLC(); lg('Loaded: ' + f.name, 'ok'); };
+  r.onload = e => {
+    srcEl.value = e.target.result;
+    updLC();
+    lg('Loaded: ' + f.name, 'ok');
+    // Switch to paste view so user can see the loaded code
+    setUploadTab('paste');
+  };
   r.readAsText(f);
 }
 function doCopy() { navigator.clipboard.writeText(outEl.value).then(() => lg('Copied to clipboard', 'ok')); }
@@ -1565,6 +1850,11 @@ function runObf() {
     setP(100, 'Obfuscate Completed!');
     outEl.value = str;
     updLC();
+    // Save to history
+    try {
+      const fname = (document.getElementById('fi')?.files?.[0]?.name) || 'script.lua';
+      addHistoryJob(fname, src, str);
+    } catch(e) {}
 
     const outSz = new Blob([str]).size;
     const st = document.getElementById('stats');
@@ -1788,13 +2078,14 @@ function whCopy() {
 <script>
 function showPage(id, el) {
   document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-  ['obf','wh','prot'].forEach(p => {
+  ['obf','wh','prot','hist'].forEach(p => {
     const el2 = document.getElementById('pg-'+p);
     if (el2) el2.style.display = 'none';
   });
   if (el) el.classList.add('active');
   const pg = document.getElementById('pg-'+id);
   if (pg) pg.style.display = '';
+  if (id === 'hist') renderHistory();
 }
 
 function setUploadTab(mode) {
@@ -1841,6 +2132,495 @@ function setP(pct, msg) {
 
 // Show output section when done
 const _origRunObf = runObf;
+
+
+// ══════════════════════════════════════════════
+//  FIREBASE AUTH
+// ══════════════════════════════════════════════
+const firebaseConfig = {
+  apiKey: "AIzaSyCUl3g_vjRuvV7NvWCc7tXu-Rgr1i_iF2Q",
+  authDomain: "luashield-46dad.firebaseapp.com",
+  projectId: "luashield-46dad",
+  storageBucket: "luashield-46dad.firebasestorage.app",
+  messagingSenderId: "559035926209",
+  appId: "1:559035926209:web:19ad43752e8dec40dfb640"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const provider = new firebase.auth.GoogleAuthProvider();
+
+function signInWithGoogle() {
+  auth.signInWithPopup(provider).catch(err => {
+    console.error('Sign-in error:', err);
+  });
+}
+
+function signOut() {
+  auth.signOut();
+}
+
+// Profile dropdown logic
+let _dropOpen = false;
+function toggleDrop() {
+  _dropOpen = !_dropOpen;
+  const dd = document.getElementById('profile-dd');
+  if (dd) dd.classList.toggle('open', _dropOpen);
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('#nav-user')) {
+    _dropOpen = false;
+    const dd = document.getElementById('profile-dd');
+    if (dd) dd.classList.remove('open');
+  }
+});
+
+function saveNickname() {
+  const val = document.getElementById('pd-nick-input').value.trim();
+  if (!val) return;
+  localStorage.setItem('ls_nickname', val);
+  document.getElementById('pd-name-display').textContent = val;
+  showToast('Nickname updated!');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('pd-toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+function fmtJoined(user) {
+  const d = new Date(user.metadata.creationTime);
+  return 'Joined ' + d.toLocaleDateString('en-US', {year:'numeric',month:'short',day:'numeric'});
+}
+
+auth.onAuthStateChanged(user => {
+  const overlay = document.getElementById('auth-overlay');
+  const navUser = document.getElementById('nav-user');
+  if (user) {
+    overlay.style.display = 'none';
+    const initial = (user.displayName || user.email || '?')[0].toUpperCase();
+    const savedNick = localStorage.getItem('ls_nickname') || user.displayName || '';
+    const joined = fmtJoined(user);
+    navUser.style.display = 'flex';
+    navUser.style.position = 'relative';
+    const displayName = savedNick || user.displayName || user.email || 'User';
+    navUser.innerHTML = `
+      <div class="profile-btn" onclick="toggleDrop(); event.stopPropagation();" title="Profile">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="6" r="3"/><path d="M2 14c0-3 2.7-5 6-5s6 2 6 5"/></svg>
+        <span class="profile-name">${displayName}</span>
+      </div>
+      <div class="profile-dropdown" id="profile-dd">
+        <!-- Header -->
+        <div class="pd-header">
+          <div class="pd-avatar">
+            ${user.photoURL
+              ? `<img src="${user.photoURL}" referrerpolicy="no-referrer">`
+              : initial}
+          </div>
+          <div class="pd-info">
+            <div class="pd-name" id="pd-name-display">${savedNick || user.displayName || 'User'}</div>
+            <div class="pd-email">${user.email}</div>
+            <div class="pd-joined">${joined}</div>
+          </div>
+        </div>
+        <!-- Nickname -->
+        <div class="pd-field">
+          <label>NICKNAME</label>
+          <div class="pd-input-row">
+            <input class="pd-input" id="pd-nick-input"
+              value="${savedNick}"
+              placeholder="Enter nickname..." maxlength="24">
+            <button class="pd-save" onclick="saveNickname()">Save</button>
+          </div>
+        </div>
+        <!-- Sign out -->
+        <div class="pd-signout" onclick="signOut()">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6">
+            <path d="M6 3H3v10h3M11 11l3-3-3-3M14 8H7"/>
+          </svg>
+          Sign out
+        </div>
+      </div>
+    `;
+  } else {
+    overlay.style.display = 'flex';
+    navUser.style.display = 'none';
+    navUser.innerHTML = '';
+  }
+});
+
+
+// ══════════════════════════════════════════════
+//  HISTORY
+// ══════════════════════════════════════════════
+const HIST_KEY = 'ls_history';
+let _histFilter = 'all';
+let _modalJob = null;
+let _modalTab = 'output';
+
+function getHistory() {
+  try { return JSON.parse(localStorage.getItem(HIST_KEY) || '[]'); }
+  catch { return []; }
+}
+
+function saveHistory(jobs) {
+  localStorage.setItem(HIST_KEY, JSON.stringify(jobs));
+}
+
+function addHistoryJob(filename, source, output) {
+  const jobs = getHistory();
+  jobs.unshift({
+    id: Date.now().toString(),
+    filename,
+    source,
+    output,
+    inputSize: new Blob([source]).size,
+    outputSize: new Blob([output]).size,
+    tier: document.querySelector('.tier-opt.selected .tier-name')?.textContent?.trim()?.split(' ')[0] || 'Medium',
+    status: 'completed',
+    ts: Date.now()
+  });
+  // Keep last 50 jobs
+  saveHistory(jobs.slice(0, 50));
+}
+
+function deleteHistJob(id) {
+  saveHistory(getHistory().filter(j => j.id !== id));
+  renderHistory();
+}
+
+function fmtSize(b) {
+  return b < 1024 ? b + ' B' : (b/1024).toFixed(0) + ' KB';
+}
+
+function fmtAgo(ts) {
+  const s = Math.floor((Date.now() - ts) / 1000);
+  if (s < 60) return 'just now';
+  if (s < 3600) return Math.floor(s/60) + ' minutes ago';
+  if (s < 86400) return Math.floor(s/3600) + ' hours ago';
+  return Math.floor(s/86400) + ' days ago';
+}
+
+function setHistFilter(f, el) {
+  _histFilter = f;
+  document.querySelectorAll('.hist-filter').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  renderHistory();
+}
+
+let _selected = new Set();
+
+function toggleSelect(id) {
+  if (_selected.has(id)) _selected.delete(id);
+  else _selected.add(id);
+  updateSelectionBar();
+  const cb = document.getElementById('cb-'+id);
+  if (cb) cb.classList.toggle('checked', _selected.has(id));
+  const item = document.getElementById('hi-'+id);
+  if (item) item.classList.toggle('selected', _selected.has(id));
+}
+
+function toggleSelectAll() {
+  const query = (document.getElementById('hist-search')?.value || '').toLowerCase();
+  const jobs = getHistory().filter(j => {
+    if (_histFilter !== 'all' && j.status !== _histFilter) return false;
+    if (query && !j.filename.toLowerCase().includes(query)) return false;
+    return true;
+  });
+  const allSelected = jobs.every(j => _selected.has(j.id));
+  if (allSelected) jobs.forEach(j => _selected.delete(j.id));
+  else jobs.forEach(j => _selected.add(j.id));
+  renderHistory();
+}
+
+function updateSelectionBar() {
+  const bar = document.getElementById('sel-bar');
+  if (!bar) return;
+  if (_selected.size > 0) {
+    bar.style.display = 'flex';
+    document.getElementById('sel-count').textContent = _selected.size + ' selected';
+  } else {
+    bar.style.display = 'none';
+  }
+}
+
+function clearSelection() {
+  _selected.clear();
+  renderHistory();
+}
+
+async function downloadSelectedAsZip() {
+  const jobs = getHistory().filter(j => _selected.has(j.id));
+  if (!jobs.length) return;
+  // Simple zip using JSZip from CDN
+  if (typeof JSZip === 'undefined') {
+    showToast('Loading ZIP library...');
+    await new Promise((res,rej) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+      s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    });
+  }
+  const zip = new JSZip();
+  jobs.forEach(j => {
+    const name = j.filename.replace(/\.lua$/,'') + '_obfuscated.lua';
+    zip.file(name, j.output);
+  });
+  const blob = await zip.generateAsync({type:'blob'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'luashield_obfuscated.zip';
+  a.click();
+  showToast('Downloaded ' + jobs.length + ' files as ZIP');
+}
+
+function deleteSelected() {
+  if (!_selected.size) return;
+  const jobs = getHistory().filter(j => !_selected.has(j.id));
+  saveHistory(jobs);
+  _selected.clear();
+  renderHistory();
+  showToast('Deleted selected jobs');
+}
+
+function renderHistory() {
+  const query = (document.getElementById('hist-search')?.value || '').toLowerCase();
+  let jobs = getHistory().filter(j => {
+    if (_histFilter !== 'all' && j.status !== _histFilter) return false;
+    if (query && !j.filename.toLowerCase().includes(query)) return false;
+    return true;
+  });
+
+  const list = document.getElementById('hist-list');
+  if (!list) return;
+
+  if (jobs.length === 0) {
+    list.innerHTML = `
+      <div class="hist-empty">
+        <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="24" cy="24" r="20"/><path d="M24 16v8.5l5 3"/>
+        </svg>
+        <div class="hist-empty-title">No jobs yet</div>
+        <div>Obfuscate a script to see it here</div>
+      </div>`;
+    updateSelectionBar();
+    return;
+  }
+
+  const allSelected = jobs.length > 0 && jobs.every(j => _selected.has(j.id));
+
+  list.innerHTML = `
+    <!-- Selection bar -->
+    <div id="sel-bar" style="display:${_selected.size>0?'flex':'none'};align-items:center;justify-content:space-between;
+      padding:14px 20px;margin-bottom:12px;border-radius:10px;
+      border:1px solid var(--gold);background:rgba(245,197,66,.06);">
+      <div style="display:flex;align-items:center;gap:12px">
+        <span id="sel-count" style="font-weight:600;color:var(--gold)">${_selected.size} selected</span>
+        <span style="font-size:13px;color:var(--muted);cursor:pointer" onclick="clearSelection()">Clear selection</span>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn-sm btn-ghost" onclick="downloadSelectedAsZip()" style="display:flex;align-items:center;gap:6px;font-size:13px">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 3v7M5 8l3 3 3-3"/><path d="M3 13h10"/></svg>
+          Download ${_selected.size} as ZIP
+        </button>
+        <button class="btn-sm" onclick="deleteSelected()" style="background:rgba(248,113,113,.15);color:var(--red);border:1px solid rgba(248,113,113,.3);display:flex;align-items:center;gap:6px;font-size:13px">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 5h10M6 5V3h4v2M6 8v5M10 8v5M5 5l.5 8h5L11 5"/></svg>
+          Delete Selected
+        </button>
+      </div>
+    </div>
+    <!-- Header -->
+    <div class="hist-header">
+      <div>
+        <div class="hist-count">${jobs.length} Job${jobs.length!==1?'s':''}</div>
+        <div class="hist-count-sub">Sorted by most recent first</div>
+      </div>
+      <button onclick="toggleSelectAll()" style="background:none;border:1px solid var(--border2);color:var(--muted);
+        padding:6px 14px;border-radius:8px;cursor:pointer;font-family:Outfit,sans-serif;font-size:13px;
+        display:flex;align-items:center;gap:6px;transition:all .15s"
+        onmouseover="this.style.borderColor='var(--gold)';this.style.color='var(--gold)'"
+        onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--muted)'">
+        ${allSelected
+          ? '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="1" y="1" width="12" height="12" rx="2"/><path d="M4 7l2 2 4-4"/></svg> Deselect All'
+          : '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="1" y="1" width="12" height="12" rx="2"/></svg> Select All'}
+      </button>
+    </div>` +
+    jobs.map(j => `
+    <div class="hist-item ${_selected.has(j.id)?'selected':''}" id="hi-${j.id}">
+      <div class="hist-checkbox ${_selected.has(j.id)?'checked':''}" id="cb-${j.id}" onclick="toggleSelect('${j.id}')"></div>
+      <div class="hist-file-icon">
+        <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 16V3h7l3 3v10H4z"/><path d="M11 3v3h3"/><path d="M7 9h4M7 12h4"/></svg>
+      </div>
+      <div class="hist-info">
+        <div class="hist-filename">${j.filename}</div>
+        <div class="hist-meta">
+          <span>${j.tier || 'Medium'}</span>
+          <span class="hist-meta-dot"></span>
+          <span>${fmtSize(j.inputSize)} <span class="hist-arrow">→</span> ${fmtSize(j.outputSize)}</span>
+          <span class="hist-meta-dot"></span>
+          <span>${fmtAgo(j.ts)}</span>
+          <span class="hist-meta-dot"></span>
+          <span class="badge-completed">COMPLETED</span>
+        </div>
+      </div>
+      <div class="hist-actions">
+        <button class="hist-action-btn" onclick="openModal('${j.id}')" title="View code">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="3"/><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"/></svg>
+        </button>
+        <button class="hist-action-btn" onclick="copyHist('${j.id}')" title="Copy output">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="5" width="9" height="9" rx="1"/><path d="M3 11V3h8"/></svg>
+        </button>
+        <button class="hist-action-btn" onclick="downloadHist('${j.id}')" title="Download">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 3v7M5 8l3 3 3-3"/><path d="M3 13h10"/></svg>
+        </button>
+        <button class="hist-action-btn del" onclick="deleteHistJob('${j.id}')" title="Delete">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 5h10M6 5V3h4v2M6 8v5M10 8v5M5 5l.5 8h5L11 5"/></svg>
+        </button>
+      </div>
+    </div>`).join('');
+}
+
+function copyHist(id) {
+  const j = getHistory().find(x => x.id === id);
+  if (j) navigator.clipboard.writeText(j.output).then(() => showToast('Copied!'));
+}
+
+function downloadHist(id) {
+  const j = getHistory().find(x => x.id === id);
+  if (!j) return;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([j.output], {type:'text/plain'}));
+  a.download = j.filename.replace(/\.lua$/,'') + '_obfuscated.lua';
+  a.click();
+}
+
+function openModal(id) {
+  const j = getHistory().find(x => x.id === id);
+  if (!j) return;
+  _modalJob = j;
+  _modalTab = 'source';
+  document.getElementById('modal-filename').textContent = j.filename;
+  document.getElementById('modal-code').textContent = j.source;
+  document.querySelectorAll('.modal-tab').forEach((t,i) => t.classList.toggle('active', i===0));
+  document.getElementById('code-modal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('code-modal').classList.remove('open');
+  _modalJob = null;
+}
+
+function switchModalTab(tab, el) {
+  _modalTab = tab;
+  document.querySelectorAll('.modal-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  if (_modalJob) {
+    document.getElementById('modal-code').textContent = tab === 'output' ? _modalJob.output : _modalJob.source;
+  }
+}
+
+function copyModalCode() {
+  if (_modalJob) {
+    const txt = _modalTab === 'output' ? _modalJob.output : _modalJob.source;
+    navigator.clipboard.writeText(txt).then(() => showToast('Copied!'));
+  }
+}
+
+function downloadModalCode() {
+  if (!_modalJob) return;
+  const txt = _modalTab === 'output' ? _modalJob.output : _modalJob.source;
+  const suffix = _modalTab === 'output' ? '_obfuscated' : '_source';
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([txt], {type:'text/plain'}));
+  a.download = _modalJob.filename.replace(/\.lua$/,'') + suffix + '.lua';
+  a.click();
+}
+
+// History is saved by the patched runObf completion block below
+
+// showPage already handles hist rendering above
+
 </script>
+
+<!-- Auth overlay -->
+<div class="auth-overlay" id="auth-overlay">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" width="22" height="22">
+        <path d="M10 2L3 6v4c0 4 3.5 7.5 7 8 3.5-.5 7-4 7-8V6L10 2z"/>
+      </svg>
+      LuaShield
+    </div>
+    <div class="auth-sub">Advanced Lua Obfuscator — Sign in to continue</div>
+    <button class="btn-google" onclick="signInWithGoogle()">
+      <svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+        <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/>
+        <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/>
+        <path fill="#FBBC05" d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z"/>
+        <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 6.293C4.672 4.166 6.656 3.58 9 3.58z"/>
+      </svg>
+      Continue with Google
+    </button>
+    <div class="auth-divider">Your account is required to use LuaShield</div>
+  </div>
+</div>
+
+<div class="pd-toast" id="pd-toast"></div>
+
+<!-- ═══ HISTORY PAGE ═══ -->
+<div class="page" id="pg-hist" style="display:none">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+    <div>
+      <div class="page-title">Job History</div>
+      <div class="page-sub" style="margin-bottom:0">View and manage all your obfuscation jobs</div>
+    </div>
+    <button class="btn-sm btn-ghost" onclick="renderHistory()" style="display:flex;align-items:center;gap:6px">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 8a6 6 0 1 0 1-3"/><path d="M2 2v3h3"/></svg>
+      Refresh
+    </button>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="hist-toolbar">
+    <div class="hist-search-wrap">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="7" cy="7" r="4"/><path d="M11 11l2.5 2.5"/></svg>
+      <input class="hist-search" id="hist-search" placeholder="Search by filename..." oninput="renderHistory()">
+    </div>
+    <div class="hist-filters">
+      <button class="hist-filter active" onclick="setHistFilter('all',this)">All</button>
+      <button class="hist-filter" onclick="setHistFilter('completed',this)">Completed</button>
+    </div>
+  </div>
+
+  <!-- List -->
+  <div id="hist-list"></div>
+</div>
+
+<!-- Code Viewer Modal -->
+<div class="modal-overlay" id="code-modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-filename">—</div>
+      <button class="modal-close" onclick="closeModal()">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 2l10 10M12 2L2 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-tabs">
+      <div class="modal-tab active" onclick="switchModalTab('source',this)">Original Source</div>
+      <div class="modal-tab" onclick="switchModalTab('output',this)">Obfuscated Output</div>
+    </div>
+    <div class="modal-body">
+      <pre class="modal-code" id="modal-code"></pre>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-sm btn-ghost" onclick="copyModalCode()">Copy</button>
+      <button class="btn-sm btn-gold" onclick="downloadModalCode()">Download</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
