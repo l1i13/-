@@ -2747,8 +2747,8 @@ function downloadModalCode() {
 
 // showPage already handles hist rendering above
 
-function copyLoadstring(apiId) {
-  const url = WORKER_URL + '/' + apiId;
+function copyLoadstring(apiId, apiKey) {
+  const url = WORKER_URL + '/' + apiId + '?key=' + apiKey;
   const str = 'loadstring(game:HttpGet("' + url + '"))()';
   navigator.clipboard.writeText(str).then(() => showToast('Loadstring copied!'));
 }
@@ -2854,7 +2854,7 @@ function _renderApiItems(apis) {
           <button class="api-action" onclick="toggleApiStatus('${a.id}', ${a.active})">
             ${a.active ? 'Deactivate' : 'Activate'}
           </button>
-          <button class="api-action" onclick="copyLoadstring('${a.id}')">Copy</button>
+          <button class="api-action" onclick="copyLoadstring('${a.id}','${a.key}')">Copy</button>
           <button class="api-action del" onclick="deleteApi('${a.id}')">Delete</button>
         </div>
       </div>`;
@@ -2918,22 +2918,28 @@ async function saveApi() {
   try {
     if (_editingApiId) {
       await getApiCollection().doc(_editingApiId).update({ name, script, active });
-      // Update top-level
       await db.collection('apis').doc(_editingApiId).update({ name, script, active });
+      // Update cache immediately
+      const cached = getApiCache().map(a => a.id === _editingApiId ? {...a, name, script, active} : a);
+      saveApiCache(cached);
       showToast('API updated!');
     } else {
       const id  = genId();
       const key = genKey();
       const data = { id, key, name, script, active, uid: _currentUid, createdAt: Date.now() };
-      // Write both in parallel
-      await Promise.all([
+      // Add to cache immediately so UI updates instantly
+      const cached = getApiCache();
+      cached.unshift(data);
+      saveApiCache(cached);
+      _renderApiFromCache(); // show immediately
+      // Write to Firestore in background
+      Promise.all([
         getApiCollection().doc(id).set(data),
         db.collection('apis').doc(id).set(data)
-      ]);
+      ]).catch(e => console.warn('Firestore write failed', e));
       showToast('API created!');
     }
     closeApiModal();
-    renderApiList();
   } catch(e) {
     showToast('Error: ' + e.message);
     console.error(e);
