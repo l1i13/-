@@ -2855,6 +2855,7 @@ function _renderApiItems(apis) {
           <button class="api-action" onclick="toggleApiStatus('${a.id}', ${a.active})">
             ${a.active ? 'Deactivate' : 'Activate'}
           </button>
+          <button class="api-action" onclick="navigator.clipboard.writeText(\`loadstring(game:HttpGet(\\"${WORKER_URL}/${a.id}\\"))()\`).then(()=>showToast('Loadstring copied!'))">Copy</button>
           <button class="api-action del" onclick="deleteApi('${a.id}')">Delete</button>
         </div>
       </div>`;
