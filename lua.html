@@ -2346,6 +2346,7 @@ function setHistFilter(f, el) {
 }
 
 let _selected = new Set();
+let _currentUid = null;
 
 function toggleSelect(id) {
   if (_selected.has(id)) _selected.delete(id);
