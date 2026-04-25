@@ -2842,13 +2842,6 @@ function _renderApiItems(apis) {
               <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="9" height="9" rx="1"/><path d="M2 10V2h8"/></svg>
             </button>
           </div>
-          <div class="api-meta-item">
-            <span class="api-meta-label">Loadstring</span>
-            <button class="api-copy-btn" onclick="navigator.clipboard.writeText(\`${loadstr}\`).then(()=>showToast('Loadstring copied!'))" title="Copy loadstring">
-              <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="9" height="9" rx="1"/><path d="M2 10V2h8"/></svg>
-            </button>
-            <span class="api-meta-val" style="font-size:10px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">loadstring(...)()</span>
-          </div>
         </div>
         <div class="api-actions">
           <button class="api-action" onclick="openApiModal('${a.id}')">Edit</button>
