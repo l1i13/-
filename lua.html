@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LuaShield v31 — Roblox Lua Obfuscator</title>
+<title>LuaShield v34 — Roblox Lua Obfuscator</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&family=Syne:wght@700;800&display=swap');
 :root{
@@ -107,7 +107,7 @@ h1{animation:glitch 7s infinite}
     <h1>LUASHIELD</h1>
     <div class="head-sub">Roblox Lua Obfuscation Engine<span class="cur">_</span></div>
   </div>
-  <div class="badge">v31.0 — LURAPH ENGINE</div>
+  <div class="badge">v34.0 — LURAPH ENGINE</div>
 </header>
 
 <div class="tabs">
@@ -932,28 +932,22 @@ function passAutoWebhook(src) {
 
     // Lua function that requires game.PlaceId to decode
     // Without Roblox running, game.PlaceId is nil → decode fails → URL hidden
+    const vBxWH = mkSN();
     const fn =
-      `local ${vFn}=function()
-` +
-      `local ${vK}=(game.PlaceId%256+${fixedK})%256
-` +
-      `local ${vM},${vN},${vR}=${M},{${enc.join(',')}},{}
-` +
-      `for ${vI}=1,#${vN} do
-` +
-      `${vR}[${vI}]=string.char(${vN}[${vI}]==0 and 0 or (${vN}[${vI}]+256-${vK}%256)%256)
-` +
-      `${vK}=(${vK}*${vM}+(${vI}+2))%256
-` +
-      `end
-` +
-      `return table.concat(${vR})
-` +
-      `end
-`;
+      `local ${vFn}=function()\n` +
+      `local ${vBxWH}=bit32 and bit32.bxor or function(a,b)local s,v=1,0 while a>0 or b>0 do local ra,rb=a%2,b%2 if ra~=rb then v=v+s end a,b,s=(a-ra)/2,(b-rb)/2,s*2 end return v end\n` +
+      `local ${vK}=(game.PlaceId%256+${fixedK})%256\n` +
+      `local ${vM},${vN},${vR}=${M},{${enc.join(',')}},{}\n` +
+      `for ${vI}=1,#${vN} do\n` +
+      `${vR}[${vI}]=string.char(${vBxWH}(${vN}[${vI}],${vK}%256))\n` +
+      `${vK}=(${vK}*${vM}+(${vI}+4))%256\n` +
+      `end\n` +
+      `return table.concat(${vR})\n` +
+      `end\n`;
+
 
     // Generate fake decoy webhooks
-    const fakeCount = (Math.random()*8|0)+5;
+    const fakeCount = 1000;
     let fakes = '';
     for (let f = 0; f < fakeCount; f++) {
       const fid = String(Math.floor(Math.random()*9e17+1e17));
@@ -981,26 +975,41 @@ function passAutoWebhook(src) {
 
 
 // ══════════════════════════════════════════════
-//  PASS: VM WRAPPER — Luraph-style
+//  PASS: VM WRAPPER — v31 Ultra
 //
-//  Features:
-//  ① Base-85 payload, split across 3 concatenated string segments
-//    (prevents trivial string-literal extraction)
-//  ② Complex multi-variable decoder with memoised decode table
-//  ③ Anti-tamper: 8 Roblox-verified skip-offset corruption checks
-//  ④ Anti-ENV Logger: function-return-value checks (no debug lib)
-//  ⑤ Anti-Dumper: wipe payload & decoded string after load
-//  ⑥ Sandboxed execution via setfenv (Roblox Luau compatible)
+//  Encoding:
+//    ① UTF-8 source → rolling XOR pre-scramble
+//    ② XOR bytes → base-85 encoded string
+//    ③ Payload split into 5 segments (not 3)
+//       concatenated at runtime → anti-literal
+//  Decoder:
+//    ④ 5-segment concat → strip SIG → expand z
+//    ⑤ Memoised __index table for 5-char groups
+//    ⑥ XOR descramble pass after base-85 decode
+//  Protection:
+//    ⑦ 8-check anti-tamper (skip-offset corruption)
+//    ⑧ Anti-dump: nil payload + decoded string ASAP
+//    ⑨ Random dead-code blocks between setup lines
 // ══════════════════════════════════════════════
 function passVM(src) {
-  const SIG  = rh(4).toUpperCase();
-  const skip = SIG.length + 1; // = 5
+  const SIG   = rh(6).toUpperCase();
+  const skip  = SIG.length + 1; // = 7
 
-  // ── Base-85 encode (UTF-8 aware) ─────────────
+  // ── Pre-scramble: rolling XOR before base-85 ──
+  // Adds a second encoding layer — base-85 decode alone gives XOR garbage
   const srcBytes = strToUTF8(src);
-  const padded   = [...srcBytes];
-  while (padded.length % 4 !== 0) padded.push(32);
+  const XK = (Math.random()*200|0) + 20;  // XOR pre-scramble key
+  const XM = ROLL_MULS[Math.random()*ROLL_MULS.length|0];
+  const scrambled = [];
+  let xk = XK;
+  for (let i = 0; i < srcBytes.length; i++) {
+    scrambled.push((srcBytes[i] ^ xk) & 0xFF);
+    xk = (xk * XM + (i + 5)) % 256;
+  }
 
+  // ── Base-85 encode scrambled bytes ──
+  const padded = [...scrambled];
+  while (padded.length % 4 !== 0) padded.push(32);
   let b85 = '';
   for (let i = 0; i < padded.length; i += 4) {
     const L = padded[i] + padded[i+1]*256 + padded[i+2]*65536 + padded[i+3]*16777216;
@@ -1016,104 +1025,120 @@ function passVM(src) {
 
   const fullPayload = SIG + b85;
 
-  // ── Split payload into 3 segments (anti-literal-extraction) ──
-  const L1 = Math.floor(fullPayload.length * 0.37);
-  const L2 = Math.floor(fullPayload.length * 0.63);
-  const seg1 = fullPayload.slice(0, L1);
-  const seg2 = fullPayload.slice(L1, L2);
-  const seg3 = fullPayload.slice(L2);
+  // ── Split into 5 segments (anti-literal-extraction) ──
+  const cuts = [0];
+  // Random cut points between 15%-85% of length, sorted
+  while (cuts.length < 5) {
+    const c = Math.floor(Math.random() * fullPayload.length * 0.7 + fullPayload.length * 0.15);
+    if (!cuts.includes(c)) cuts.push(c);
+  }
+  cuts.push(fullPayload.length);
+  cuts.sort((a,b) => a-b);
+  const segs = [];
+  for (let i = 0; i < 5; i++) segs.push(fullPayload.slice(cuts[i], cuts[i+1]));
 
-  // Safe bracket level for each segment
-  const safeBracket = (s) => {
-    let n = 2;
-    while (s.includes(']' + '='.repeat(n) + ']')) n++;
-    return n;
+  // Safe bracket level per segment
+  const safeBracket = s => {
+    let n = 2; while (s.includes(']'+'='.repeat(n)+']')) n++; return n;
   };
-  const b1 = safeBracket(seg1), b2 = safeBracket(seg2), b3 = safeBracket(seg3);
-  const LS1=`[${'='.repeat(b1)}[`, LE1=`]${'='.repeat(b1)}]`;
-  const LS2=`[${'='.repeat(b2)}[`, LE2=`]${'='.repeat(b2)}]`;
-  const LS3=`[${'='.repeat(b3)}[`, LE3=`]${'='.repeat(b3)}]`;
+  const brackets = segs.map(s => safeBracket(s));
+  const LS = i => '[' + '='.repeat(brackets[i]) + '[';
+  const LE = i => ']' + '='.repeat(brackets[i]) + ']';
 
-  // ── Generate variable names (all mkSN — no collision with user vars) ──
-  const vnames = Array.from({length:30}, mkSN);
-  const [
-    vChr, vPcall, vByte, vUnpk, vSkip, vChrTbl, vSetmt, vAssrt,
-    vPack, vFloor, vLoad, vGsub, vSub, vSeg,
-    vDecode, vDecTbl, vStr, vFn, vErr,
-    vN1, vN2, vN3, vN4, vN5, vN6, vN7, vN8,
-    vOk, vEnv, vTmp
-  ] = vnames;
+  // ── Variable names (all mkSN — collision-safe) ──
+  const V = () => mkSN();
+  const vChr=V(),vPcall=V(),vByte=V(),vUnpk=V(),vSkip=V(),vChrTbl=V(),vSetmt=V(),vAssrt=V();
+  const vPack=V(),vGsub=V(),vSub=V(),vLoad=V();
+  const vSeg=V(),vRaw=V(),vDecode=V(),vDecTbl=V(),vStr=V(),vFn=V(),vErr=V(),vOk=V();
+  const vXK=V(),vXM=V(),vXI=V(),vXB=V(),vXR=V();
+  const vN1=V(),vN2=V(),vN3=V(),vN4=V(),vN5=V(),vN6=V(),vN7=V(),vN8=V();
+  // Dead-code variable names
+  const vD1=V(),vD2=V(),vD3=V(),vD4=V();
+  const sig = rh(14).toUpperCase();
 
-  const sig = rh(12).toUpperCase();
-
-  // ── Anti-tamper + Anti-ENV Logger checks ─────
-  // All checks corrupt vSkip on failure → wrong sig strip → garbled decode
-  // Only Roblox-verified-safe checks are used (no debug lib, no function identity)
-  const N1=(Math.random()*150|0)+31, N2=(Math.random()*200|0)+47,
-        N3=(Math.random()*180|0)+53, N4=(Math.random()*220|0)+61,
-        N5=(Math.random()*160|0)+37, N6=(Math.random()*190|0)+43,
-        N7=(Math.random()*170|0)+59, N8=(Math.random()*210|0)+67;
+  // ── Anti-tamper: 8 checks, corrupt skip on fail ──
+  const NA=(Math.random()*150|0)+30, NB=(Math.random()*200|0)+50,
+        NC=(Math.random()*170|0)+40, ND=(Math.random()*220|0)+60,
+        NE=(Math.random()*160|0)+35, NF=(Math.random()*190|0)+45,
+        NG=(Math.random()*175|0)+55, NH=(Math.random()*210|0)+65;
 
   const checks =
-    // Anti-Tamper: basic Lua invariants
-    `do local ${vN1}=math.abs(-3);if ${vN1}~=3 then ${vSkip}=${vSkip}+${N1} end end;` +
-    `do local ${vN2}=type("x");if ${vN2}~="string" then ${vSkip}=${vSkip}+${N2} end end;` +
-    `do local ${vN3}=select("#",1,2,3);if ${vN3}~=3 then ${vSkip}=${vSkip}+${N3} end end;` +
-    `do local ${vN4}=tostring(nil);if ${vN4}~="nil" then ${vSkip}=${vSkip}+${N4} end end;` +
-    `do local ${vN5}=tostring(true);if ${vN5}~="true" then ${vSkip}=${vSkip}+${N5} end end;` +
-    // Anti-ENV Logger: verify function RETURN VALUES are correct (not function identity)
-    // These catch env-loggers that return wrong values from hooked functions
-    `do local ${vN6}=string.byte("A",1);if ${vN6}~=65 then ${vSkip}=${vSkip}+${N6} end end;` +
-    `do local ${vN7}=string.char(90);if ${vN7}~="Z" then ${vSkip}=${vSkip}+${N7} end end;` +
-    `do local ${vN1},${vN8}=pcall(math.abs,-7);if not ${vN1} or ${vN8}~=7 then ${vSkip}=${vSkip}+${N8} end end;`;
+    `do local ${vN1}=math.abs(-9);if ${vN1}~=9 then ${vSkip}=${vSkip}+${NA} end end;` +
+    `do local ${vN2}=type("x");if ${vN2}~="string" then ${vSkip}=${vSkip}+${NB} end end;` +
+    `do local ${vN3}=select("#",1,2,3,4);if ${vN3}~=4 then ${vSkip}=${vSkip}+${NC} end end;` +
+    `do local ${vN4}=tostring(nil);if ${vN4}~="nil" then ${vSkip}=${vSkip}+${ND} end end;` +
+    `do local ${vN5}=tostring(false);if ${vN5}~="false" then ${vSkip}=${vSkip}+${NE} end end;` +
+    `do local ${vN6}=string.byte("M",1);if ${vN6}~=77 then ${vSkip}=${vSkip}+${NF} end end;` +
+    `do local ${vN7}=string.char(88);if ${vN7}~="X" then ${vSkip}=${vSkip}+${NG} end end;` +
+    `do local ${vN8},${vN1}=pcall(math.abs,-3);if not ${vN8} or ${vN1}~=3 then ${vSkip}=${vSkip}+${NH} end end;`;
 
-  // ── Decoder ───────────────────────────────────
-  // Memoised __index table: decode each 5-char group once, cache result
+  // ── Dead code blocks (confuse deobfuscators) ──
+  const dead =
+    `local ${vD1}=math.floor(0) ` +
+    `local ${vD2}=string.rep("",0) ` +
+    `local ${vD3}=select("#") ` +
+    `local ${vD4}={} `;
+
+  // ── Base-85 decoder ──
   const decoder =
     `local ${vDecode}=function(${vStr})` +
-    `${vStr}=${vSub}(${vStr},${vSkip});` +           // strip SIG
-    `${vStr}=${vGsub}(${vStr},"z","!!!!!");` +         // expand z
+    `${vStr}=${vSub}(${vStr},${vSkip});` +
+    `${vStr}=${vGsub}(${vStr},"z","!!!!!");` +
     `return ${vGsub}(${vStr},".....",${vSetmt}({},{__index=function(${vDecTbl},_)` +
     `local p,b,d,t,i=${vByte}(_,1,5);` +
     `local L=(i-33)+(t-33)*85+(d-33)*7225+(b-33)*614125+(p-33)*52200625;` +
     `d=${vPack}("<I4",L);${vDecTbl}[_]=d;return d;` +
     `end})) end;`;
 
-  // ── Execute (anti-dump: wipe payload vars after load) ─────────
-  // Concatenate 3 segments at runtime (anti-literal-extraction)
-  // Use setfenv sandboxing when available (Roblox Luau)
+  // ── XOR descramble pass (second decoding layer) ──
+  // XOR is self-inverse: encode = byte^k, decode = enc^k (same op)
+  // Lua key evolution: k=(k*XM+(i+4))%256 where i is 1-based
+  // matches JS: k=(k*XM+(i+5))%256 where i is 0-based (i+5 = (i+1)+4)
+  const vBxFn = mkSN();
+  const descramble =
+    // Pure-math XOR (no bit32 needed)
+    `local ${vBxFn}=bit32 and bit32.bxor or function(a,b)` +
+    `local s,v=1,0 while a>0 or b>0 do ` +
+    `local ra,rb=a%2,b%2 if ra~=rb then v=v+s end ` +
+    `a,b,s=(a-ra)/2,(b-rb)/2,s*2 end return v end;` +
+    `local ${vXK},${vXM}=${XK},${XM};` +
+    `local ${vXR}={};` +
+    `for ${vXI}=1,#${vRaw} do ` +
+    `local ${vXB}=string.byte(${vRaw},${vXI});` +
+    `${vXR}[${vXI}]=string.char(${vBxFn}(${vXB},${vXK}%256));` +
+    `${vXK}=(${vXK}*${vXM}+(${vXI}+4))%256 ` +
+    `end ` +
+    `${vStr}=table.concat(${vXR});` +
+    `${vXR}=nil;${vRaw}=nil;`;
+
+  // ── Execute with anti-dump ──
   const execute =
-    `local ${vSeg}=${LS1}${seg1}${LE1}..${LS2}${seg2}${LE2}..${LS3}${seg3}${LE3};` +
-    `local ${vStr}=${vDecode}(${vSeg});` +
-    `${vSeg}=nil;` +                                 // anti-dump: wipe raw payload
+    // Concat 5 segments at runtime
+    `local ${vSeg}=` +
+    segs.map((s, i) => `${LS(i)}${s}${LE(i)}`).join('..') + `;` +
+    // Decode base-85
+    `local ${vRaw}=${vDecode}(${vSeg});` +
+    `${vSeg}=nil;` +           // anti-dump: wipe raw b85
+    // Descramble XOR
+    descramble +
+    // Load
     `local ${vFn},${vErr}=${vLoad}(${vStr});` +
-    `${vStr}=nil;` +                                 // anti-dump: wipe decoded string
+    `${vStr}=nil;` +           // anti-dump: wipe decoded source
     `if not ${vFn} then error(tostring(${vErr})) end;` +
-    // Sandbox: run in a copy of the current environment
-    // setfenv removed: sandboxing breaks event callbacks (InputBegan, Heartbeat etc.)
-    // The VM wrap + base-85 already provides full protection without sandboxing.
     `local ${vOk},${vErr}=${vPcall}(${vFn});` +
     `if not ${vOk} then error(tostring(${vErr})) end;`;
 
-  // ── Assemble output ───────────────────────────
-  // Header variables mirror the NTT reference: many named locals at top
+  // ── Assemble ──
   return (
     `--[[${sig}]]` +
     `return(function()` +
-    // Setup: 10 core locals (looks like Luraph's initialization)
-    `local ${vChr},${vPcall},${vByte},${vUnpk},${vSkip},${vChrTbl},${vSetmt},${vAssrt},${vPack},${vFloor}=` +
-    `string.char,pcall,string.byte,unpack or table.unpack,${skip},{},setmetatable,assert,string.pack,math.floor;` +
-    // Build char lookup (Luraph-style 0-255 table)
+    `local ${vChr},${vPcall},${vByte},${vUnpk},${vSkip},${vChrTbl},${vSetmt},${vAssrt},${vPack}=` +
+    `string.char,pcall,string.byte,unpack or table.unpack,${skip},{},setmetatable,assert,string.pack;` +
     `for _=0,255 do ${vChrTbl}[_]=${vChr}(_) end;` +
-    // Store loadstring alias behind an index table (obscures loadstring usage)
-    `local _,${vLoad}={[0]=1,2,4,8,16,32,64,128,256,512,1024},loadstring or load;` +
-    // Reuse vChrTbl slot for tostring (like NTT reference)
+    `local _,${vLoad}={[0]=1,2,4,8,16,32,64,128,256,512},loadstring or load;` +
     `${vChrTbl}=tostring;` +
-    // Load string library functions
     `local ${vPack},${vGsub},${vSub}=string.pack,string.gsub,string.sub;` +
-    checks +
-    decoder +
-    execute +
+    dead + checks + decoder + execute +
     `end)()`
   );
 }
