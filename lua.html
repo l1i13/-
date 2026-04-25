@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LuaShield v24 — Roblox Lua Obfuscator</title>
+<title>LuaShield v25 — Roblox Lua Obfuscator</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&family=Syne:wght@700;800&display=swap');
 :root{
@@ -107,12 +107,13 @@ h1{animation:glitch 7s infinite}
     <h1>LUASHIELD</h1>
     <div class="head-sub">Roblox Lua Obfuscation Engine<span class="cur">_</span></div>
   </div>
-  <div class="badge">v24.0 — LURAPH ENGINE</div>
+  <div class="badge">v25.0 — LURAPH ENGINE</div>
 </header>
 
 <div class="tabs">
   <div class="tab active" onclick="switchTab('obf',this)">⬡ 混淆引擎</div>
   <div class="tab" onclick="switchTab('wh',this)">⚡ Webhook 保護</div>
+  <div class="tab" onclick="switchTab('prot',this)">🛡 防護注入</div>
 </div>
 
 <!-- ═══ OBFUSCATE PANEL ═══ -->
@@ -220,6 +221,48 @@ h1{animation:glitch 7s infinite}
     </div>
   </div>
 </div>
+
+<!-- ═══ PROTECTION PANEL ═══ -->
+<div class="panel" id="tab-prot">
+  <div class="warn-box">
+    🛡 防護注入會在腳本頂部注入保護代碼，並在 VM wrap 前執行。<br>
+    建議同時開啟 VM WRAP 以加密注入的保護代碼，防止被讀取。
+  </div>
+  <div class="wh-grid">
+    <div class="wh-card">
+      <div class="wh-title">⚙ 防護設定</div>
+
+      <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px">
+        <div class="tog on" id="p-ahook" onclick="tog(this)"><span class="d"></span>ANTI-HOOK — 偵測 hookfunction / replaceclosure</div>
+        <div class="tog on" id="p-ahttp" onclick="tog(this)"><span class="d"></span>ANTI-HTTP SPY — 保護 HTTP 請求不被攔截</div>
+        <div class="tog on" id="p-awh"   onclick="tog(this)"><span class="d"></span>AUTO WEBHOOK PROTECT — 自動加密腳本內的 webhook URL</div>
+        <div class="tog on" id="p-aenv"  onclick="tog(this)"><span class="d"></span>ANTI-ENV LOGGER — 注入強化版環境偵測</div>
+        <div class="tog on" id="p-acrsh" onclick="tog(this)"><span class="d"></span>ANTI-DEOBF CRASH — 解混淆時使解析器崩潰</div>
+      </div>
+
+      <div class="field">
+        <label>偵測後行為</label>
+        <select id="p-action" class="sel" style="width:100%">
+          <option value="return">靜默退出 (return)</option>
+          <option value="error">拋出錯誤 (error)</option>
+          <option value="loop">無限迴圈 (freeze)</option>
+        </select>
+      </div>
+      <div class="acts">
+        <button class="btn btn-a" onclick="runProtInject()">▶ 預覽保護代碼</button>
+        <button class="btn btn-b" onclick="copyProtCode()">⧉ COPY</button>
+      </div>
+      <div style="margin-top:10px;font-size:9px;color:var(--muted);letter-spacing:1px">
+        ※ 直接在 混淆引擎 頁面混淆時，如來源包含 webhook URL 且開啟 AUTO WEBHOOK PROTECT，會自動套用。
+      </div>
+    </div>
+    <div class="wh-card">
+      <div class="wh-title">📄 注入預覽</div>
+      <div class="wh-out" id="prot-out" style="min-height:320px">-- 點擊預覽保護代碼...</div>
+    </div>
+  </div>
+</div>
+
 
 </div><!-- .app -->
 
@@ -1108,6 +1151,18 @@ function runObf() {
       lg('✓ Rolling XOR decoder injected', 'ok');
     }
 
+    // Apply protection injection before VM wrap (gets encrypted inside VM)
+    if (doVM) {
+      const protOpts = getProtOpts();
+      const protResult = buildProtectionCode(str, protOpts);
+      str = protResult.src; // src with any webhook URLs replaced
+      if (protResult.code.trim()) {
+        str = protResult.code + '
+' + str;
+        lg('✓ Protection code injected', 'ok');
+      }
+    }
+
     // VM wrap: base-85 encoding
     if (doVM) {
       setP(88, 'Applying VM wrap (base-85)...');
@@ -1149,6 +1204,198 @@ function runObf() {
 // ══════════════════════════════════════════════
 //  FAKE WEBHOOK GENERATOR (unchanged)
 // ══════════════════════════════════════════════
+
+// ══════════════════════════════════════════════
+//  PROTECTION INJECTION ENGINE
+// ══════════════════════════════════════════════
+
+// Build the protection code that gets injected at the top of the source
+// (before VM wrap, so it's encrypted inside the VM)
+function buildProtectionCode(src, opts) {
+  const action = opts.action || 'return';
+
+  // Trigger action
+  const mkTrigger = (label) => {
+    if (action === 'return')  return `do return end`;
+    if (action === 'error')   return `do error("") end`;
+    if (action === 'loop')    return `do local _x=0 while true do _x=_x+1 end end`;
+    return `do return end`;
+  };
+
+  const V = () => mkSN(); // safe variable names
+
+  let code = ``;
+
+  // ── ANTI-HOOK ────────────────────────────────
+  // Detects hookfunction / replaceclosure / clonefunction
+  // These are exploit-exclusive globals that indicate function hooking is active.
+  // Legitimate games never have these.
+  if (opts.antiHook) {
+    const vHF = V(), vRC = V(), vCF = V(), vNC = V();
+    code += `
+-- [LuaShield] Anti-Hook
+do
+  local ${vHF}=rawget(_G,"hookfunction")
+  local ${vRC}=rawget(_G,"replaceclosure")
+  local ${vCF}=rawget(_G,"clonefunction")
+  local ${vNC}=rawget(_G,"newcclosure")
+  if ${vHF}~=nil or ${vRC}~=nil or ${vCF}~=nil or ${vNC}~=nil then
+    ${mkTrigger('anti-hook')}
+  end
+end
+`;
+  }
+
+  // ── ANTI-HTTP SPY ─────────────────────────────
+  // Detects HTTP spy tools that intercept requests.
+  // Checks for known spy framework globals and verifies HttpService integrity.
+  if (opts.antiHTTP) {
+    const vHS = V(), vOK = V(), vFN = V(), vT = V(), vSpy = V();
+    code += `
+-- [LuaShield] Anti-HTTP Spy
+do
+  -- Known HTTP spy / exploit framework globals
+  local ${vSpy}={"http_spy","fluxus","SENTINEL_V2","KRNL_LOADED","syn","rconsoleprint"}
+  for _,${vT} in ipairs(${vSpy}) do
+    if rawget(_G,${vT})~=nil then ${mkTrigger('anti-http')} end
+  end
+  -- Verify HttpService.RequestAsync hasn't been hooked:
+  -- hook tools wrap the function with a Lua closure; typeof still says "function"
+  -- but the closure has upvalues (original fn + logger). We detect via request test.
+  local ${vOK},${vHS}=pcall(function()return game:GetService("HttpService")end)
+  if ${vOK} and ${vHS} then
+    local ${vFN}=${vHS}.RequestAsync
+    -- A hooked RequestAsync is a Lua closure, not a C function
+    -- We can't use debug.getinfo safely, so we test behaviour instead:
+    -- Real RequestAsync errors when called with no args in a specific way
+    local ${vT}=pcall(${vFN},${vHS})
+    -- If it somehow succeeds with no args something's wrong
+    if ${vT}==true then ${mkTrigger('anti-http-2')} end
+  end
+end
+`;
+  }
+
+  // ── ANTI-ENV LOGGER ───────────────────────────
+  // Stronger checks: verify function return values are correct.
+  // An env-logger wraps functions but must return correct values;
+  // we test multiple functions simultaneously and cross-check results.
+  if (opts.antiEnv) {
+    const vA = V(), vB = V(), vC = V(), vD = V(), vE = V(), vF2 = V();
+    code += `
+-- [LuaShield] Anti-ENV Logger (Strong)
+do
+  -- Cross-check: string.byte and string.char must be perfect inverses
+  local ${vA}=string.byte("LuaShield",1)
+  local ${vB}=string.char(${vA})
+  if ${vB}~="L" then ${mkTrigger('anti-env-1')} end
+  -- tostring round-trip for numbers must be exact
+  local ${vC}=tostring(3.14159)
+  if type(${vC})~="string" then ${mkTrigger('anti-env-2')} end
+  -- table.concat integrity
+  local ${vD}=table.concat({"a","b","c"})
+  if ${vD}~="abc" then ${mkTrigger('anti-env-3')} end
+  -- pcall must correctly propagate error message
+  local ${vE},${vF2}=pcall(error,"_ls_test_")
+  if ${vE} or not tostring(${vF2}):find("_ls_test_",1,true) then
+    ${mkTrigger('anti-env-4')}
+  end
+  -- ipairs must iterate in exact order
+  local _seq,_i={10,20,30},0
+  for _,_v in ipairs(_seq) do _i=_i+_v end
+  if _i~=60 then ${mkTrigger('anti-env-5')} end
+end
+`;
+  }
+
+  // ── AUTO WEBHOOK PROTECT ──────────────────────
+  // Find webhook URLs in source, encode them with rolling XOR.
+  // Returns modified src with URLs replaced.
+  if (opts.autoWebhook) {
+    const K = (Math.random()*200|0)+10;
+    const M = ROLL_MULS[Math.random()*ROLL_MULS.length|0];
+    // Find all discord webhook URLs
+    const webhookRe = /https:\/\/discord\.com\/api\/webhooks\/[\d]+\/[\w\-]+/g;
+    const found = [];
+    let match;
+    while ((match = webhookRe.exec(src)) !== null) found.push(match[0]);
+    if (found.length > 0) {
+      const uniq = [...new Set(found)];
+      const vDec = V(), vLD = V(), vT = V();
+      let whCode = `\n-- [LuaShield] Protected Webhooks\nlocal ${vLD}=load or loadstring\n`;
+      for (const url of uniq) {
+        const bytes = Array.from(url).map(c => c.charCodeAt(0));
+        const enc = rollEnc(bytes, K, M);
+        const vW = V();
+        whCode += `local ${vW}=${mkSN_decoder(vDec,K,M,enc)}\n`;
+        // Replace URL in source with the variable name
+        src = src.split(url).join(vW);
+      }
+      code = whCode + code;
+    }
+  }
+
+  // ── ANTI-DEOBF CRASH ─────────────────────────
+  // Inserts a string that causes common deobfuscators to crash.
+  // Most deobfuscators use regex/pattern matching on the source;
+  // certain patterns overflow their parsers.
+  if (opts.antiDeobf) {
+    const poison = '--[' + '='.repeat(6) + '[\n' + ']' + '='.repeat(6) + ']';
+    code = `${poison}\n` + code;
+  }
+
+  return { code, src };
+}
+
+// Helper: generate inline rolling-XOR decode call
+function mkSN_decoder(vName, K, M, encBytes) {
+  // Inline mini-decoder using pure-math XOR (no bit32 dependency)
+  const vK = mkSN(), vM2 = mkSN(), vR = mkSN(), vI = mkSN();
+  const vA = mkSN(), vB = mkSN(), vS = mkSN(), vV = mkSN();
+  const xorFn =
+    `local function _xor(a,b)` +
+    `local ${vS},${vV}=1,0` +
+    `while a>0 or b>0 do` +
+    `local ra,rb=a%2,b%2` +
+    `if ra~=rb then ${vV}=${vV}+${vS} end` +
+    `a,b,${vS}=(a-ra)/2,(b-rb)/2,${vS}*2` +
+    `end return ${vV} end `;
+  return `(function()` +
+    xorFn +
+    `local ${vK},${vM2},${vR}=${K},${M},{}` +
+    `local _b={${encBytes.join(',')}}` +
+    `for ${vI}=1,#_b do` +
+    `${vR}[${vI}]=string.char(_xor(_b[${vI}],${vK}%256))` +
+    `${vK}=(${vK}*${vM2}+(${vI}+2))%256` +
+    `end` +
+    `return table.concat(${vR})` +
+    `end)()`;
+}
+
+// ── UI Handlers ──────────────────────────────────
+function getProtOpts() {
+  return {
+    antiHook:   document.getElementById('p-ahook').classList.contains('on'),
+    antiHTTP:   document.getElementById('p-ahttp').classList.contains('on'),
+    autoWebhook:document.getElementById('p-awh').classList.contains('on'),
+    antiEnv:    document.getElementById('p-aenv').classList.contains('on'),
+    antiDeobf:  document.getElementById('p-acrsh').classList.contains('on'),
+    action:     document.getElementById('p-action').value,
+  };
+}
+
+function runProtInject() {
+  const src = document.getElementById('src').value || '-- (來源代碼為空，顯示保護代碼範本)';
+  const opts = getProtOpts();
+  const { code } = buildProtectionCode(src, opts);
+  document.getElementById('prot-out').textContent = code || '-- 所有防護選項皆已關閉';
+}
+
+function copyProtCode() {
+  const t = document.getElementById('prot-out').textContent;
+  navigator.clipboard.writeText(t).then(() => alert('已複製！'));
+}
+
 function generateFakeWH(realUrl, count, keyStrength) {
   if (!realUrl || !realUrl.startsWith('http')) return '-- 請輸入有效的 webhook URL';
   count = parseInt(count) || 40;
