@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LuaShield v29 — Roblox Lua Obfuscator</title>
+<title>LuaShield v30 — Roblox Lua Obfuscator</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&family=Syne:wght@700;800&display=swap');
 :root{
@@ -107,7 +107,7 @@ h1{animation:glitch 7s infinite}
     <h1>LUASHIELD</h1>
     <div class="head-sub">Roblox Lua Obfuscation Engine<span class="cur">_</span></div>
   </div>
-  <div class="badge">v29.0 — LURAPH ENGINE</div>
+  <div class="badge">v30.0 — LURAPH ENGINE</div>
 </header>
 
 <div class="tabs">
@@ -1070,8 +1070,10 @@ function runObf() {
       lg(`─── Pass ${pass}/${PASSES} ───`, 'info');
 
       // Step 1: Rename local variables (only on first pass)
-      // Rename vars — safe even with VM on; makes decoded output still unreadable
-      if (doVar && pass === 1) {
+      // Rename vars — disabled when VM is on to prevent closure/upvalue issues
+      // in complex scripts with _G shared state, closures across multiple events, etc.
+      // Double VM wrap (on MEDIUM+) compensates for deobf resistance.
+      if (doVar && pass === 1 && !doVM) {
         setP(12 + pass*8, `[${pass}] Renaming vars...`);
         const [t2, cnt] = passRename(toks);
         toks = t2; totalVar = cnt;
@@ -1150,12 +1152,18 @@ function runObf() {
     if (doVM) {
       setP(88, 'Applying VM wrap (base-85)...');
       str = passVM(str);
-      lg(`✓ VM wrap applied (base-85)`, 'ok');
-      // Double wrap on HEAVY (3 passes) — drastically harder to deobfuscate
-      if (PASSES >= 3) {
-        setP(94, 'Applying second VM wrap layer...');
+      lg(`✓ VM wrap layer 1 applied`, 'ok');
+      // MEDIUM (2 passes): double wrap — attacker must decode 2 VM layers
+      // HEAVY  (3 passes): triple wrap — 3 layers, each with different keys
+      if (PASSES >= 2) {
+        setP(93, 'Applying VM wrap layer 2...');
         str = passVM(str);
-        lg(`✓ Second VM wrap layer applied`, 'ok');
+        lg(`✓ VM wrap layer 2 applied`, 'ok');
+      }
+      if (PASSES >= 3) {
+        setP(97, 'Applying VM wrap layer 3...');
+        str = passVM(str);
+        lg(`✓ VM wrap layer 3 applied`, 'ok');
       }
     }
 
