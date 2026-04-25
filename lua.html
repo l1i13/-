@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LuaShield v26 — Roblox Lua Obfuscator</title>
+<title>LuaShield v27 — Roblox Lua Obfuscator</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&family=Syne:wght@700;800&display=swap');
 :root{
@@ -107,7 +107,7 @@ h1{animation:glitch 7s infinite}
     <h1>LUASHIELD</h1>
     <div class="head-sub">Roblox Lua Obfuscation Engine<span class="cur">_</span></div>
   </div>
-  <div class="badge">v26.0 — LURAPH ENGINE</div>
+  <div class="badge">v27.0 — LURAPH ENGINE</div>
 </header>
 
 <div class="tabs">
@@ -1224,87 +1224,51 @@ function buildProtectionCode(src, opts) {
   const V = () => mkSN(); // safe variable names
 
   let code = ``;
+  // All protection blocks are wrapped in pcall so they NEVER crash the main script,
+  // even if _G is nil or APIs behave unexpectedly in the loadstring environment.
 
   // ── ANTI-HOOK ────────────────────────────────
-  // Detects hookfunction / replaceclosure / clonefunction
-  // These are exploit-exclusive globals that indicate function hooking is active.
-  // Legitimate games never have these.
   if (opts.antiHook) {
-    const vHF = V(), vRC = V(), vCF = V(), vNC = V();
-    code += `
--- [LuaShield] Anti-Hook
-do
-  local ${vHF}=rawget(_G,"hookfunction")
-  local ${vRC}=rawget(_G,"replaceclosure")
-  local ${vCF}=rawget(_G,"clonefunction")
-  local ${vNC}=rawget(_G,"newcclosure")
-  if ${vHF}~=nil or ${vRC}~=nil or ${vCF}~=nil or ${vNC}~=nil then
-    ${mkTrigger('anti-hook')}
-  end
-end
-`;
+    const vHF = V(), vRC = V(), vCF = V(), vNC = V(), vEnvT = V();
+    code += `pcall(function()` +
+    `local ${vEnvT}=getfenv and getfenv() or _G or {}` +
+    `local ${vHF}=rawget(${vEnvT},"hookfunction")` +
+    `local ${vRC}=rawget(${vEnvT},"replaceclosure")` +
+    `local ${vCF}=rawget(${vEnvT},"clonefunction")` +
+    `local ${vNC}=rawget(${vEnvT},"newcclosure")` +
+    `if ${vHF}~=nil or ${vRC}~=nil or ${vCF}~=nil or ${vNC}~=nil then ` +
+    `${mkTrigger('anti-hook')} end ` +
+    `end)\n`;
   }
 
   // ── ANTI-HTTP SPY ─────────────────────────────
-  // Detects HTTP spy tools that intercept requests.
-  // Checks for known spy framework globals and verifies HttpService integrity.
   if (opts.antiHTTP) {
-    const vHS = V(), vOK = V(), vFN = V(), vT = V(), vSpy = V();
-    code += `
--- [LuaShield] Anti-HTTP Spy
-do
-  -- Known HTTP spy / exploit framework globals
-  local ${vSpy}={"http_spy","fluxus","SENTINEL_V2","KRNL_LOADED","syn","rconsoleprint"}
-  for _,${vT} in ipairs(${vSpy}) do
-    if rawget(_G,${vT})~=nil then ${mkTrigger('anti-http')} end
-  end
-  -- Verify HttpService.RequestAsync hasn't been hooked:
-  -- hook tools wrap the function with a Lua closure; typeof still says "function"
-  -- but the closure has upvalues (original fn + logger). We detect via request test.
-  local ${vOK},${vHS}=pcall(function()return game:GetService("HttpService")end)
-  if ${vOK} and ${vHS} then
-    local ${vFN}=${vHS}.RequestAsync
-    -- A hooked RequestAsync is a Lua closure, not a C function
-    -- We can't use debug.getinfo safely, so we test behaviour instead:
-    -- Real RequestAsync errors when called with no args in a specific way
-    local ${vT}=pcall(${vFN},${vHS})
-    -- If it somehow succeeds with no args something's wrong
-    if ${vT}==true then ${mkTrigger('anti-http-2')} end
-  end
-end
-`;
+    const vHS = V(), vOK = V(), vFN = V(), vT = V(), vSpy = V(), vEnvT = V();
+    code += `pcall(function()` +
+    `local ${vEnvT}=getfenv and getfenv() or _G or {}` +
+    `local ${vSpy}={"http_spy","fluxus","SENTINEL_V2","KRNL_LOADED","rconsoleprint"}` +
+    `for _,${vT} in ipairs(${vSpy}) do ` +
+    `if rawget(${vEnvT},${vT})~=nil then ${mkTrigger('anti-http')} end ` +
+    `end ` +
+    `end)\n`;
   }
 
   // ── ANTI-ENV LOGGER ───────────────────────────
-  // Stronger checks: verify function return values are correct.
-  // An env-logger wraps functions but must return correct values;
-  // we test multiple functions simultaneously and cross-check results.
   if (opts.antiEnv) {
-    const vA = V(), vB = V(), vC = V(), vD = V(), vE = V(), vF2 = V();
-    code += `
--- [LuaShield] Anti-ENV Logger (Strong)
-do
-  -- Cross-check: string.byte and string.char must be perfect inverses
-  local ${vA}=string.byte("LuaShield",1)
-  local ${vB}=string.char(${vA})
-  if ${vB}~="L" then ${mkTrigger('anti-env-1')} end
-  -- tostring round-trip for numbers must be exact
-  local ${vC}=tostring(3.14159)
-  if type(${vC})~="string" then ${mkTrigger('anti-env-2')} end
-  -- table.concat integrity
-  local ${vD}=table.concat({"a","b","c"})
-  if ${vD}~="abc" then ${mkTrigger('anti-env-3')} end
-  -- pcall must correctly propagate error message
-  local ${vE},${vF2}=pcall(error,"_ls_test_")
-  if ${vE} or not tostring(${vF2}):find("_ls_test_",1,true) then
-    ${mkTrigger('anti-env-4')}
-  end
-  -- ipairs must iterate in exact order
-  local _seq,_i={10,20,30},0
-  for _,_v in ipairs(_seq) do _i=_i+_v end
-  if _i~=60 then ${mkTrigger('anti-env-5')} end
-end
-`;
+    const vA = V(), vB = V(), vC = V(), vD = V(), vE = V(), vF2 = V(), vI = V(), vSeq = V();
+    code += `pcall(function()` +
+    `local ${vA}=string.byte("A",1)` +
+    `if ${vA}~=65 then ${mkTrigger('env-1')} end ` +
+    `local ${vB}=string.char(90)` +
+    `if ${vB}~="Z" then ${mkTrigger('env-2')} end ` +
+    `local ${vC}=table.concat({"x","y","z"})` +
+    `if ${vC}~="xyz" then ${mkTrigger('env-3')} end ` +
+    `local ${vD},${vE}=pcall(error,"_ls_")` +
+    `if ${vD} or not tostring(${vE}):find("_ls_",1,true) then ${mkTrigger('env-4')} end ` +
+    `local ${vSeq},${vI}={7,14,21},0 ` +
+    `for _,_v in ipairs(${vSeq}) do ${vI}=${vI}+_v end ` +
+    `if ${vI}~=42 then ${mkTrigger('env-5')} end ` +
+    `end)\n`;
   }
 
   // ── AUTO WEBHOOK PROTECT ──────────────────────
