@@ -2851,11 +2851,11 @@ function _renderApiItems(apis) {
           </div>
         </div>
         <div class="api-actions">
-          <button class="api-action" onclick="openApiModal('${d.id}')">Edit</button>
-          <button class="api-action" onclick="toggleApiStatus('${d.id}', ${a.active})">
+          <button class="api-action" onclick="openApiModal('${a.id}')">Edit</button>
+          <button class="api-action" onclick="toggleApiStatus('${a.id}', ${a.active})">
             ${a.active ? 'Deactivate' : 'Activate'}
           </button>
-          <button class="api-action del" onclick="deleteApi('${d.id}')">Delete</button>
+          <button class="api-action del" onclick="deleteApi('${a.id}')">Delete</button>
         </div>
       </div>`;
   }).join('');
