@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LuaShield v39 — Roblox Lua Obfuscator</title>
+<title>LuaShield v40 — Roblox Lua Obfuscator</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&family=Syne:wght@700;800&display=swap');
 :root{
@@ -107,7 +107,7 @@ h1{animation:glitch 7s infinite}
     <h1>LUASHIELD</h1>
     <div class="head-sub">Roblox Lua Obfuscation Engine<span class="cur">_</span></div>
   </div>
-  <div class="badge">v39.0 — LURAPH ENGINE</div>
+  <div class="badge">v40.0 — LURAPH ENGINE</div>
 </header>
 
 <div class="tabs">
@@ -1165,7 +1165,14 @@ function passVM(src) {
     `local ${vOk},${vErr}=${vPcall}(${vFn});` +
     `if not ${vOk} then error(tostring(${vErr})) end;`;
 
-  const dead = junkLines.join(';') + ';' +
+  // Wrap every 40 locals in do...end to stay under Lua's 200-local-per-chunk limit
+  const JUNK_BLOCK = 40;
+  let deadParts = [];
+  for (let i = 0; i < junkLines.length; i += JUNK_BLOCK) {
+    const block = junkLines.slice(i, i + JUNK_BLOCK);
+    deadParts.push('do ' + block.join(';') + ' end');
+  }
+  const dead = deadParts.join(';') + ';' +
     `local ${vD1}=0;local ${vD2}="";local ${vD3}=0;local ${vD4}={};`;
 
   return (
