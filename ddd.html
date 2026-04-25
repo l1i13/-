@@ -2061,13 +2061,14 @@ function whCopy() {
 <script>
 function showPage(id, el) {
   document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-  ['obf','wh','prot'].forEach(p => {
+  ['obf','wh','prot','hist'].forEach(p => {
     const el2 = document.getElementById('pg-'+p);
     if (el2) el2.style.display = 'none';
   });
   if (el) el.classList.add('active');
   const pg = document.getElementById('pg-'+id);
   if (pg) pg.style.display = '';
+  if (id === 'hist') renderHistory();
 }
 
 function setUploadTab(mode) {
@@ -2414,12 +2415,7 @@ function downloadModalCode() {
 
 // History is saved by the patched runObf completion block below
 
-// Init history when page shows
-const _origShowPage = showPage;
-function showPage(id, el) {
-  _origShowPage(id, el);
-  if (id === 'hist') renderHistory();
-}
+// showPage already handles hist rendering above
 
 </script>
 
