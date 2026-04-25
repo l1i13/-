@@ -383,58 +383,58 @@ textarea::placeholder { color: var(--dim); }
 }
 
 .profile-dropdown {
-  position: absolute; top: calc(100% + 10px); right: 0;
+  position: absolute; top: calc(100% + 12px); right: 0;
   background: var(--card); border: 1px solid var(--border);
-  border-radius: 12px; padding: 0; width: 280px;
-  box-shadow: 0 8px 32px rgba(0,0,0,.6);
+  border-radius: 16px; padding: 0; width: 360px;
+  box-shadow: 0 12px 40px rgba(0,0,0,.7);
   z-index: 200; overflow: hidden;
   opacity: 0; pointer-events: none; transform: translateY(-8px);
-  transition: opacity .15s, transform .15s;
+  transition: opacity .18s, transform .18s;
 }
 .profile-dropdown.open {
   opacity: 1; pointer-events: all; transform: translateY(0);
 }
 .pd-header {
-  padding: 20px; border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; gap: 12px;
+  padding: 24px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 16px;
 }
 .pd-avatar {
-  width: 44px; height: 44px; border-radius: 50%;
+  width: 56px; height: 56px; border-radius: 50%;
   background: var(--gold); display: grid; place-items: center;
-  font-size: 18px; font-weight: 700; color: #000; flex-shrink: 0;
+  font-size: 22px; font-weight: 700; color: #000; flex-shrink: 0;
   overflow: hidden;
 }
-.pd-avatar img { width: 44px; height: 44px; object-fit: cover; }
+.pd-avatar img { width: 56px; height: 56px; object-fit: cover; }
 .pd-info { flex: 1; min-width: 0; }
-.pd-name { font-weight: 600; font-size: 14px; }
-.pd-email { font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pd-joined { font-size: 10px; color: var(--dim); margin-top: 2px; }
+.pd-name { font-weight: 700; font-size: 17px; margin-bottom: 3px; }
+.pd-email { font-size: 13px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pd-joined { font-size: 12px; color: var(--dim); margin-top: 4px; }
 
-.pd-field { padding: 16px 20px; border-bottom: 1px solid var(--border); }
-.pd-field label { font-size: 11px; color: var(--muted); display: block; margin-bottom: 6px; }
-.pd-input-row { display: flex; gap: 6px; }
+.pd-field { padding: 20px 24px; border-bottom: 1px solid var(--border); }
+.pd-field label { font-size: 12px; color: var(--muted); letter-spacing: .5px; display: block; margin-bottom: 8px; font-weight: 600; }
+.pd-input-row { display: flex; gap: 8px; }
 .pd-input {
   flex: 1; background: var(--bg2); border: 1px solid var(--border2);
   color: var(--text); font-family: 'Outfit', sans-serif;
-  font-size: 13px; padding: 7px 10px; border-radius: 7px; outline: none;
+  font-size: 14px; padding: 10px 14px; border-radius: 9px; outline: none;
   transition: border-color .15s;
 }
 .pd-input:focus { border-color: var(--gold); }
 .pd-save {
-  padding: 7px 12px; background: var(--gold); color: #000;
-  border: none; border-radius: 7px; cursor: pointer;
-  font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 600;
+  padding: 10px 18px; background: var(--gold); color: #000;
+  border: none; border-radius: 9px; cursor: pointer;
+  font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 700;
   transition: background .15s; white-space: nowrap;
 }
 .pd-save:hover { background: var(--gold3); }
 
 .pd-signout {
-  padding: 14px 20px; display: flex; align-items: center; gap: 10px;
-  cursor: pointer; font-size: 13px; color: var(--muted);
+  padding: 18px 24px; display: flex; align-items: center; gap: 12px;
+  cursor: pointer; font-size: 14px; color: var(--muted);
   transition: all .15s;
 }
 .pd-signout:hover { background: rgba(248,113,113,.08); color: var(--red); }
-.pd-signout svg { width: 14px; height: 14px; }
+.pd-signout svg { width: 16px; height: 16px; }
 
 .pd-toast {
   position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
