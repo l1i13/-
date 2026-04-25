@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LuaShield v23 — Roblox Lua Obfuscator</title>
+<title>LuaShield v24 — Roblox Lua Obfuscator</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&family=Syne:wght@700;800&display=swap');
 :root{
@@ -107,7 +107,7 @@ h1{animation:glitch 7s infinite}
     <h1>LUASHIELD</h1>
     <div class="head-sub">Roblox Lua Obfuscation Engine<span class="cur">_</span></div>
   </div>
-  <div class="badge">v23.0 — NTT ENGINE</div>
+  <div class="badge">v24.0 — LURAPH ENGINE</div>
 </header>
 
 <div class="tabs">
@@ -849,16 +849,22 @@ function passAPINames(toks, dsV) {
 }
 
 // ══════════════════════════════════════════════
-//  PASS: VM WRAPPER  (v5.5)
-//  Anti-tamper: infinite loop trap
-//  Anti-env-logger: debug.getinfo checks C functions
-//  Base-85 encoded, symbol-rich output
+//  PASS: VM WRAPPER — Luraph-style
+//
+//  Features:
+//  ① Base-85 payload, split across 3 concatenated string segments
+//    (prevents trivial string-literal extraction)
+//  ② Complex multi-variable decoder with memoised decode table
+//  ③ Anti-tamper: 8 Roblox-verified skip-offset corruption checks
+//  ④ Anti-ENV Logger: function-return-value checks (no debug lib)
+//  ⑤ Anti-Dumper: wipe payload & decoded string after load
+//  ⑥ Sandboxed execution via setfenv (Roblox Luau compatible)
 // ══════════════════════════════════════════════
 function passVM(src) {
   const SIG  = rh(4).toUpperCase();
-  const skip = SIG.length + 1;
+  const skip = SIG.length + 1; // = 5
 
-  // Base-85 encode (UTF-8 bytes)
+  // ── Base-85 encode (UTF-8 aware) ─────────────
   const srcBytes = strToUTF8(src);
   const padded   = [...srcBytes];
   while (padded.length % 4 !== 0) padded.push(32);
@@ -876,54 +882,108 @@ function passVM(src) {
     b85 += String.fromCharCode(c1, c2, c3, c4, c5);
   }
 
-  const payload = SIG + b85;
+  const fullPayload = SIG + b85;
 
-  // Safe bracket level
-  let bracketN = 2;
-  while (payload.includes(']' + '='.repeat(bracketN) + ']')) bracketN++;
-  const LS = '[' + '='.repeat(bracketN) + '[';
-  const LE = ']' + '='.repeat(bracketN) + ']';
+  // ── Split payload into 3 segments (anti-literal-extraction) ──
+  const L1 = Math.floor(fullPayload.length * 0.37);
+  const L2 = Math.floor(fullPayload.length * 0.63);
+  const seg1 = fullPayload.slice(0, L1);
+  const seg2 = fullPayload.slice(L1, L2);
+  const seg3 = fullPayload.slice(L2);
 
-  const [vA,vP,vy,ve,vSk,vC,vF,vV,vZ,vGs,vSb,vLd,vDec,vH,vStr,vFn,vEr,
-         vT1,vT2,vT3] = Array.from({length:20}, mkSN); // safe names
-  const sig = rh(10).toUpperCase();
+  // Safe bracket level for each segment
+  const safeBracket = (s) => {
+    let n = 2;
+    while (s.includes(']' + '='.repeat(n) + ']')) n++;
+    return n;
+  };
+  const b1 = safeBracket(seg1), b2 = safeBracket(seg2), b3 = safeBracket(seg3);
+  const LS1=`[${'='.repeat(b1)}[`, LE1=`]${'='.repeat(b1)}]`;
+  const LS2=`[${'='.repeat(b2)}[`, LE2=`]${'='.repeat(b2)}]`;
+  const LS3=`[${'='.repeat(b3)}[`, LE3=`]${'='.repeat(b3)}]`;
 
-  // ── Anti-tamper: corrupt skip offset on hook detection ──
-  const N1 = (Math.random()*200|0)+53;
-  const N2 = (Math.random()*300|0)+97;
+  // ── Generate variable names (all mkSN — no collision with user vars) ──
+  const vnames = Array.from({length:30}, mkSN);
+  const [
+    vChr, vPcall, vByte, vUnpk, vSkip, vChrTbl, vSetmt, vAssrt,
+    vPack, vFloor, vLoad, vGsub, vSub, vSeg,
+    vDecode, vDecTbl, vStr, vFn, vErr,
+    vN1, vN2, vN3, vN4, vN5, vN6, vN7, vN8,
+    vOk, vEnv, vTmp
+  ] = vnames;
+
+  const sig = rh(12).toUpperCase();
+
+  // ── Anti-tamper + Anti-ENV Logger checks ─────
+  // All checks corrupt vSkip on failure → wrong sig strip → garbled decode
+  // Only Roblox-verified-safe checks are used (no debug lib, no function identity)
+  const N1=(Math.random()*150|0)+31, N2=(Math.random()*200|0)+47,
+        N3=(Math.random()*180|0)+53, N4=(Math.random()*220|0)+61,
+        N5=(Math.random()*160|0)+37, N6=(Math.random()*190|0)+43,
+        N7=(Math.random()*170|0)+59, N8=(Math.random()*210|0)+67;
 
   const checks =
-    `do local ${vT1}=math.abs(-1);if ${vT1}~=1 then ${vSk}=${vSk}+${N1} end end;` +
-    `do local ${vT1}=type("x");if ${vT1}~="string" then ${vSk}=${vSk}+${N2} end end;`;
+    // Anti-Tamper: basic Lua invariants
+    `do local ${vN1}=math.abs(-3);if ${vN1}~=3 then ${vSkip}=${vSkip}+${N1} end end;` +
+    `do local ${vN2}=type("x");if ${vN2}~="string" then ${vSkip}=${vSkip}+${N2} end end;` +
+    `do local ${vN3}=select("#",1,2,3);if ${vN3}~=3 then ${vSkip}=${vSkip}+${N3} end end;` +
+    `do local ${vN4}=tostring(nil);if ${vN4}~="nil" then ${vSkip}=${vSkip}+${N4} end end;` +
+    `do local ${vN5}=tostring(true);if ${vN5}~="true" then ${vSkip}=${vSkip}+${N5} end end;` +
+    // Anti-ENV Logger: verify function RETURN VALUES are correct (not function identity)
+    // These catch env-loggers that return wrong values from hooked functions
+    `do local ${vN6}=string.byte("A",1);if ${vN6}~=65 then ${vSkip}=${vSkip}+${N6} end end;` +
+    `do local ${vN7}=string.char(90);if ${vN7}~="Z" then ${vSkip}=${vSkip}+${N7} end end;` +
+    `do local ${vN1},${vN8}=pcall(math.abs,-7);if not ${vN1} or ${vN8}~=7 then ${vSkip}=${vSkip}+${N8} end end;`;
 
-  // Base-85 decoder
+  // ── Decoder ───────────────────────────────────
+  // Memoised __index table: decode each 5-char group once, cache result
   const decoder =
-    `local ${vH}=function(b)` +
-    `b=${vSb}(b,${vSk});` +
-    `b=${vGs}(b,"z","!!!!!");` +
-    `return ${vGs}(b,".....",${vF}({},{__index=function(${vDec},_)` +
-    `local p,b,d,t,i=${vy}(_,1,5);` +
+    `local ${vDecode}=function(${vStr})` +
+    `${vStr}=${vSub}(${vStr},${vSkip});` +           // strip SIG
+    `${vStr}=${vGsub}(${vStr},"z","!!!!!");` +         // expand z
+    `return ${vGsub}(${vStr},".....",${vSetmt}({},{__index=function(${vDecTbl},_)` +
+    `local p,b,d,t,i=${vByte}(_,1,5);` +
     `local L=(i-33)+(t-33)*85+(d-33)*7225+(b-33)*614125+(p-33)*52200625;` +
-    `d=${vZ}("<I4",L);${vDec}[_]=d;return d;` +
+    `d=${vPack}("<I4",L);${vDecTbl}[_]=d;return d;` +
     `end})) end;`;
 
+  // ── Execute (anti-dump: wipe payload vars after load) ─────────
+  // Concatenate 3 segments at runtime (anti-literal-extraction)
+  // Use setfenv sandboxing when available (Roblox Luau)
   const execute =
-    `local ${vStr}=${vH}(${LS}${payload}${LE});` +
-    `local ${vFn},${vEr}=(${vLd})(${vStr});` +
-    `if not ${vFn} then error(tostring(${vEr})) end;` +
-    `local _ok,_er=pcall(${vFn});` +
-    `if not _ok then error(tostring(_er)) end;`;
+    `local ${vSeg}=${LS1}${seg1}${LE1}..${LS2}${seg2}${LE2}..${LS3}${seg3}${LE3};` +
+    `local ${vStr}=${vDecode}(${vSeg});` +
+    `${vSeg}=nil;` +                                 // anti-dump: wipe raw payload
+    `local ${vFn},${vErr}=${vLoad}(${vStr});` +
+    `${vStr}=nil;` +                                 // anti-dump: wipe decoded string
+    `if not ${vFn} then error(tostring(${vErr})) end;` +
+    // Sandbox: run in a copy of the current environment
+    `if setfenv then ` +
+    `local ${vEnv}=${vSetmt}({},{__index=getfenv()});` +
+    `pcall(setfenv,${vFn},${vEnv});` +
+    `end;` +
+    `local ${vOk},${vErr}=${vPcall}(${vFn});` +
+    `if not ${vOk} then error(tostring(${vErr})) end;`;
 
+  // ── Assemble output ───────────────────────────
+  // Header variables mirror the NTT reference: many named locals at top
   return (
     `--[[${sig}]]` +
     `return(function()` +
-    `local ${vA},${vP},${vy},${ve},${vSk},${vC},${vF},${vV}=` +
-    `string.char,pcall,string.byte,unpack or table.unpack,${skip},{},setmetatable,assert;` +
-    `for _=0,255 do ${vC}[_]=${vA}(_) end;` +
-    `local _,${vLd}={[0]=1,2,4,8,16,32,64,128},loadstring or load;` +
-    `${vC}=tostring;` +
-    `local ${vZ},${vGs},${vSb}=string.pack,string.gsub,string.sub;` +
-    checks + decoder + execute +
+    // Setup: 10 core locals (looks like Luraph's initialization)
+    `local ${vChr},${vPcall},${vByte},${vUnpk},${vSkip},${vChrTbl},${vSetmt},${vAssrt},${vPack},${vFloor}=` +
+    `string.char,pcall,string.byte,unpack or table.unpack,${skip},{},setmetatable,assert,string.pack,math.floor;` +
+    // Build char lookup (Luraph-style 0-255 table)
+    `for _=0,255 do ${vChrTbl}[_]=${vChr}(_) end;` +
+    // Store loadstring alias behind an index table (obscures loadstring usage)
+    `local _,${vLoad}={[0]=1,2,4,8,16,32,64,128,256,512,1024},loadstring or load;` +
+    // Reuse vChrTbl slot for tostring (like NTT reference)
+    `${vChrTbl}=tostring;` +
+    // Load string library functions
+    `local ${vPack},${vGsub},${vSub}=string.pack,string.gsub,string.sub;` +
+    checks +
+    decoder +
+    execute +
     `end)()`
   );
 }
