@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LuaShield v40 — Roblox Lua Obfuscator</title>
+<title>LuaShield v41 — Roblox Lua Obfuscator</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&family=Syne:wght@700;800&display=swap');
 :root{
@@ -107,7 +107,7 @@ h1{animation:glitch 7s infinite}
     <h1>LUASHIELD</h1>
     <div class="head-sub">Roblox Lua Obfuscation Engine<span class="cur">_</span></div>
   </div>
-  <div class="badge">v40.0 — LURAPH ENGINE</div>
+  <div class="badge">v41.0 — LURAPH ENGINE</div>
 </header>
 
 <div class="tabs">
@@ -129,6 +129,7 @@ h1{animation:glitch 7s infinite}
     <div class="tog on" id="t-com"  onclick="tog(this)"><span class="d"></span>STRIP COMMENTS</div>
     <div class="tog on" id="t-vm"   onclick="tog(this)"><span class="d"></span>VM WRAP</div>
     <div class="tog on" id="t-wha"  onclick="tog(this)"><span class="d"></span>AUTO WEBHOOK PROTECT</div>
+    <div class="tog on" id="t-prot" onclick="tog(this)"><span class="d"></span>INJECT PROTECTION</div>
     <!-- hidden toggles for compatibility -->
     <div style="display:none">
       <div class="tog" id="t-api"></div>
@@ -1306,6 +1307,24 @@ function runObf() {
       decoderLua = mkDS(dsVar);
       str = decoderLua + apiHeader + str;
       lg('✓ Rolling XOR decoder injected', 'ok');
+    }
+
+    // Auto protection injection (runs BEFORE VM so it's encrypted inside)
+    if (isOn('t-prot')) {
+      const protOpts = {
+        antiHook: true,
+        antiHTTP: true,
+        antiEnv:  true,
+        antiDeobf: false, // skip deobf crash - can confuse Roblox's own parser
+        autoWebhook: false, // handled separately below
+        action: 'return',
+      };
+      const protResult = buildProtectionCode(str, protOpts);
+      str = protResult.src;
+      if (protResult.code.trim()) {
+        str = protResult.code + '\n' + str;
+        lg('✓ Protection code auto-injected (anti-hook + anti-env + anti-http)', 'ok');
+      }
     }
 
     // Auto webhook protection (before VM so URL is inside encrypted payload)
