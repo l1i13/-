@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LuaShield v28 — Roblox Lua Obfuscator</title>
+<title>LuaShield v29 — Roblox Lua Obfuscator</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&family=Syne:wght@700;800&display=swap');
 :root{
@@ -107,7 +107,7 @@ h1{animation:glitch 7s infinite}
     <h1>LUASHIELD</h1>
     <div class="head-sub">Roblox Lua Obfuscation Engine<span class="cur">_</span></div>
   </div>
-  <div class="badge">v28.0 — LURAPH ENGINE</div>
+  <div class="badge">v29.0 — LURAPH ENGINE</div>
 </header>
 
 <div class="tabs">
@@ -1070,15 +1070,12 @@ function runObf() {
       lg(`─── Pass ${pass}/${PASSES} ───`, 'info');
 
       // Step 1: Rename local variables (only on first pass)
-      // Skip rename when VM is on — VM provides full obfuscation,
-      // rename risks breaking variable references in complex Roblox scripts
-      if (doVar && pass === 1 && !doVM) {
+      // Rename vars — safe even with VM on; makes decoded output still unreadable
+      if (doVar && pass === 1) {
         setP(12 + pass*8, `[${pass}] Renaming vars...`);
         const [t2, cnt] = passRename(toks);
         toks = t2; totalVar = cnt;
         lg(`✓ Renamed ${cnt} vars`, 'ok');
-      } else if (doVar && doVM && pass === 1) {
-        lg('ℹ Var rename skipped (VM provides full obfuscation)', 'info');
       }
 
       // Step 2: API name obfuscation (only on first pass, needs dsVar)
@@ -1147,17 +1144,6 @@ function runObf() {
       decoderLua = mkDS(dsVar);
       str = decoderLua + apiHeader + str;
       lg('✓ Rolling XOR decoder injected', 'ok');
-    }
-
-    // Apply protection injection before VM wrap (gets encrypted inside VM)
-    if (doVM) {
-      const protOpts = getProtOpts();
-      const protResult = buildProtectionCode(str, protOpts);
-      str = protResult.src; // src with any webhook URLs replaced
-      if (protResult.code.trim()) {
-        str = protResult.code + '\n' + str;
-        lg('✓ Protection code injected', 'ok');
-      }
     }
 
     // VM wrap: base-85 encoding
