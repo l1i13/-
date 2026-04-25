@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LuaShield v22 — Roblox Lua Obfuscator</title>
+<title>LuaShield v23 — Roblox Lua Obfuscator</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&family=Syne:wght@700;800&display=swap');
 :root{
@@ -107,7 +107,7 @@ h1{animation:glitch 7s infinite}
     <h1>LUASHIELD</h1>
     <div class="head-sub">Roblox Lua Obfuscation Engine<span class="cur">_</span></div>
   </div>
-  <div class="badge">v22.0 — NTT ENGINE</div>
+  <div class="badge">v23.0 — NTT ENGINE</div>
 </header>
 
 <div class="tabs">
@@ -969,11 +969,15 @@ function runObf() {
       lg(`─── Pass ${pass}/${PASSES} ───`, 'info');
 
       // Step 1: Rename local variables (only on first pass)
-      if (doVar && pass === 1) {
+      // Skip rename when VM is on — VM provides full obfuscation,
+      // rename risks breaking variable references in complex Roblox scripts
+      if (doVar && pass === 1 && !doVM) {
         setP(12 + pass*8, `[${pass}] Renaming vars...`);
         const [t2, cnt] = passRename(toks);
         toks = t2; totalVar = cnt;
         lg(`✓ Renamed ${cnt} vars`, 'ok');
+      } else if (doVar && doVM && pass === 1) {
+        lg('ℹ Var rename skipped (VM provides full obfuscation)', 'info');
       }
 
       // Step 2: API name obfuscation (only on first pass, needs dsVar)
@@ -1006,8 +1010,8 @@ function runObf() {
         lg('✓ Numbers encoded', 'ok');
       }
 
-      // Re-tokenize for multi-pass
-      if (pass < PASSES) {
+      // Re-tokenize for multi-pass (only needed when not VM-only mode)
+      if (pass < PASSES && !doVM) {
         setP(50 + pass*6, `[${pass}] Re-tokenizing...`);
         toks = tokenize(toks2s(toks));
       }
