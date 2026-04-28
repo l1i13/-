@@ -3,112 +3,204 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>RemoteLink — 手機遠端控制</title>
+<title>RemoteLink</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=DM+Sans:wght@300;400;500;700&display=swap');
-
-:root {
-  --bg:   #080b10;
-  --bg2:  #0e1219;
-  --bg3:  #151c27;
-  --bg4:  #1c2535;
-  --cyan: #00d4ff;
-  --c2:   rgba(0,212,255,.12);
-  --grn:  #00ff88;
-  --red:  #ff3b5c;
-  --amb:  #ffb830;
-  --txt:  #dde8f8;
-  --mut:  #4a5c74;
-  --bdr:  rgba(0,212,255,.18);
-  --mono: 'Share Tech Mono', monospace;
-  --sans: 'DM Sans', sans-serif;
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=DM+Sans:wght@400;500;700&display=swap');
+:root{
+  --bg:#080b10;--bg2:#0e1219;--bg3:#151c27;--bg4:#1a2233;
+  --cyan:#00d4ff;--c2:rgba(0,212,255,.12);
+  --grn:#00ff88;--red:#ff3b5c;--amb:#ffb830;--pur:#a78bfa;
+  --txt:#dde8f8;--mut:#4a5c74;--bdr:rgba(0,212,255,.18);
+  --mono:'Share Tech Mono',monospace;--sans:'DM Sans',sans-serif;
 }
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 html,body{width:100%;height:100%;background:var(--bg);color:var(--txt);font-family:var(--sans);overflow:hidden;}
-body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.06) 2px,rgba(0,0,0,.06) 4px);pointer-events:none;z-index:9999;}
+
+/* scanlines */
+body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.05) 3px,rgba(0,0,0,.05) 4px);pointer-events:none;z-index:9999;}
 
 .view{display:none;width:100%;height:100%;}
 .view.active{display:flex;flex-direction:column;}
 
-/* ── ROLE ── */
-#v-role{align-items:center;justify-content:center;background:radial-gradient(ellipse 100% 80% at 50% 0%,rgba(0,212,255,.07),transparent 70%);}
-.wrap{width:100%;max-width:440px;padding:2rem 1.5rem;}
-.brand{text-align:center;margin-bottom:3rem;}
-.btag{font-family:var(--mono);font-size:10px;letter-spacing:5px;color:var(--cyan);opacity:.6;text-transform:uppercase;margin-bottom:.5rem;}
-.brand h1{font-size:2.4rem;font-weight:700;letter-spacing:-1.5px;line-height:1;}
-.brand h1 em{color:var(--cyan);font-style:normal;}
-.rgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
-.rcard{background:var(--bg3);border:1px solid var(--bdr);border-radius:18px;padding:1.75rem 1rem;text-align:center;cursor:pointer;transition:transform .15s,border-color .15s,background .15s;}
+/* ══ ROLE ══ */
+#v-role{align-items:center;justify-content:center;
+  background:radial-gradient(ellipse 120% 60% at 50% 0%,rgba(0,212,255,.08),transparent 60%);}
+.wrap{width:100%;max-width:420px;padding:2rem 1.25rem;}
+.brand{text-align:center;margin-bottom:2.5rem;}
+.brand-tag{font-family:var(--mono);font-size:10px;letter-spacing:5px;color:var(--cyan);opacity:.5;text-transform:uppercase;margin-bottom:.4rem;}
+.brand h1{font-size:2.2rem;font-weight:700;letter-spacing:-1px;}
+.brand h1 span{color:var(--cyan);}
+.rgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.rcard{background:var(--bg3);border:1px solid var(--bdr);border-radius:16px;padding:1.5rem 1rem;text-align:center;cursor:pointer;transition:.15s;}
 .rcard:hover{border-color:var(--cyan);background:var(--c2);transform:translateY(-2px);}
 .rcard:active{transform:scale(.97);}
-.ricon{font-size:2.8rem;margin-bottom:.75rem;}
-.rname{font-size:1rem;font-weight:700;margin-bottom:.25rem;}
-.rdesc{font-size:11px;color:var(--mut);line-height:1.5;}
-.tip{margin-top:1.75rem;padding:12px 16px;background:rgba(255,184,48,.06);border:1px solid rgba(255,184,48,.2);border-radius:10px;font-size:12px;color:#a8843a;line-height:1.6;}
-.tip strong{color:var(--amb);}
+.rcard .ico{font-size:2.5rem;margin-bottom:.6rem;}
+.rcard h2{font-size:.95rem;font-weight:700;margin-bottom:.2rem;}
+.rcard p{font-size:11px;color:var(--mut);line-height:1.5;}
+.note{margin-top:1.5rem;padding:12px 16px;background:rgba(167,139,250,.07);border:1px solid rgba(167,139,250,.2);border-radius:10px;font-size:12px;color:#8b79c4;line-height:1.7;}
+.note strong{color:var(--pur);}
 
-/* ── PHONE ── */
-#v-phone{position:relative;background:var(--bg);}
-#ph-wait{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;gap:1.5rem;}
-.cbadge{background:var(--bg3);border:1px solid var(--bdr);border-radius:16px;padding:1.5rem 2rem;text-align:center;}
-.clabel{font-family:var(--mono);font-size:10px;letter-spacing:4px;color:var(--mut);margin-bottom:.5rem;}
-.cval{font-family:var(--mono);font-size:3rem;letter-spacing:.4em;color:var(--cyan);text-shadow:0 0 20px rgba(0,212,255,.5);}
-.spill{display:flex;align-items:center;gap:8px;padding:8px 16px;background:var(--bg3);border:1px solid var(--bdr);border-radius:999px;font-size:13px;font-family:var(--mono);color:var(--mut);}
-.dot{width:8px;height:8px;border-radius:50%;background:var(--mut);flex-shrink:0;}
+/* ══ PHONE ══ */
+#v-phone{position:relative;}
+
+/* Phone — waiting */
+#ph-setup{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;gap:1.25rem;}
+.code-badge{background:var(--bg3);border:1px solid var(--bdr);border-radius:14px;padding:1.25rem 2rem;text-align:center;width:100%;max-width:300px;}
+.code-lbl{font-family:var(--mono);font-size:10px;letter-spacing:4px;color:var(--mut);margin-bottom:.4rem;}
+.code-num{font-family:var(--mono);font-size:2.8rem;letter-spacing:.35em;color:var(--cyan);text-shadow:0 0 20px rgba(0,212,255,.45);}
+.status-row{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:12px;color:var(--mut);}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--mut);}
 .dot.wait{background:var(--amb);box-shadow:0 0 6px var(--amb);animation:blink 1s infinite;}
 .dot.ok{background:var(--grn);box-shadow:0 0 8px var(--grn);animation:blink 2s infinite;}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
-.sbtn{width:100%;padding:14px;background:var(--cyan);color:#000;border:none;border-radius:12px;font-family:var(--sans);font-size:15px;font-weight:700;cursor:pointer;transition:.15s;}
-.sbtn:active{transform:scale(.97);background:#00bce0;}
-.sbtn:disabled{background:var(--bg4);color:var(--mut);cursor:default;}
-#ph-err{font-size:12px;color:var(--red);text-align:center;font-family:var(--mono);min-height:16px;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
 
-#ph-overlay{display:none;position:fixed;inset:0;z-index:8000;}
-#rcursor{position:fixed;width:28px;height:28px;border:2.5px solid var(--cyan);border-radius:50%;background:rgba(0,212,255,.15);transform:translate(-50%,-50%);pointer-events:none;transition:left .06s linear,top .06s linear;box-shadow:0 0 12px rgba(0,212,255,.5);display:none;z-index:8001;}
-.ripple{position:fixed;width:44px;height:44px;border:2px solid var(--cyan);border-radius:50%;transform:translate(-50%,-50%) scale(0);pointer-events:none;animation:ra .55s ease-out forwards;z-index:8002;}
-@keyframes ra{to{transform:translate(-50%,-50%) scale(2.5);opacity:0;}}
-#ph-hud{position:fixed;top:12px;left:50%;transform:translateX(-50%);display:none;align-items:center;gap:8px;background:rgba(10,13,18,.88);backdrop-filter:blur(8px);border:1px solid var(--bdr);border-radius:999px;padding:6px 14px;font-size:12px;font-family:var(--mono);z-index:8003;color:var(--grn);pointer-events:none;}
+.progress-bar{width:100%;max-width:300px;height:3px;background:var(--bg4);border-radius:2px;overflow:hidden;display:none;}
+.progress-fill{height:100%;background:var(--cyan);border-radius:2px;width:0%;transition:width .15s;}
 
-/* ── COMPUTER ── */
+/* Phone OS — the "screen" being streamed */
+#ph-screen{
+  position:fixed;inset:0;z-index:100;
+  background:var(--bg);
+  display:none;flex-direction:column;
+  overflow:hidden;
+}
+/* status bar */
+.ph-statusbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:6px 16px;background:rgba(8,11,16,.9);
+  font-family:var(--mono);font-size:11px;color:var(--txt);
+  flex-shrink:0;border-bottom:1px solid var(--bdr);
+}
+.ph-statusbar .signal{display:flex;align-items:flex-end;gap:2px;}
+.ph-statusbar .signal span{width:3px;background:var(--cyan);border-radius:1px;}
+.ph-statusbar .signal span:nth-child(1){height:5px}
+.ph-statusbar .signal span:nth-child(2){height:8px}
+.ph-statusbar .signal span:nth-child(3){height:11px}
+.ph-statusbar .batt{display:flex;align-items:center;gap:3px;font-size:10px;}
+.batt-icon{width:20px;height:10px;border:1.5px solid var(--txt);border-radius:2px;position:relative;display:flex;align-items:center;padding:1px;}
+.batt-icon::after{content:'';position:absolute;right:-4px;top:50%;transform:translateY(-50%);width:2px;height:5px;background:var(--txt);border-radius:0 1px 1px 0;}
+.batt-fill{height:100%;background:var(--grn);border-radius:1px;width:78%;}
+
+/* widgets area */
+.ph-content{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px;}
+.widget{background:var(--bg2);border:1px solid var(--bdr);border-radius:14px;padding:14px 16px;position:relative;overflow:hidden;}
+.widget::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(0,212,255,.03),transparent 60%);pointer-events:none;}
+
+/* clock widget */
+.clock-widget{text-align:center;padding:20px;}
+.clock-time{font-family:var(--mono);font-size:3.5rem;color:var(--txt);line-height:1;letter-spacing:-.02em;}
+.clock-date{font-size:13px;color:var(--mut);margin-top:6px;}
+
+/* quick tiles */
+.tiles-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+.tile{background:var(--bg3);border:1px solid var(--bdr);border-radius:12px;padding:10px 4px;text-align:center;cursor:pointer;transition:.15s;user-select:none;}
+.tile.on{background:var(--c2);border-color:var(--cyan);}
+.tile:active{transform:scale(.93);}
+.tile-icon{font-size:1.4rem;margin-bottom:4px;}
+.tile-name{font-size:9px;color:var(--mut);font-family:var(--mono);}
+.tile.on .tile-name{color:var(--cyan);}
+
+/* notes widget */
+.widget-title{font-size:11px;color:var(--mut);letter-spacing:2px;font-family:var(--mono);text-transform:uppercase;margin-bottom:10px;}
+.note-area{width:100%;background:transparent;border:none;resize:none;color:var(--txt);font-family:var(--sans);font-size:13px;line-height:1.6;outline:none;min-height:80px;}
+
+/* app grid */
+.apps-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+.app-icon{display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;user-select:none;}
+.app-icon:active .app-img{transform:scale(.88);}
+.app-img{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;transition:.15s;}
+.app-label{font-size:10px;color:var(--mut);text-align:center;}
+
+/* Remote cursor overlay (on phone, shows where computer is pointing) */
+#rcursor{
+  position:fixed;z-index:10000;pointer-events:none;
+  width:30px;height:30px;
+  border:2px solid var(--cyan);
+  border-radius:50%;
+  background:rgba(0,212,255,.15);
+  transform:translate(-50%,-50%);
+  box-shadow:0 0 12px rgba(0,212,255,.6);
+  display:none;
+  transition:left .05s,top .05s;
+}
+.tap-ring{
+  position:fixed;z-index:10001;pointer-events:none;
+  width:46px;height:46px;
+  border:2px solid var(--cyan);border-radius:50%;
+  transform:translate(-50%,-50%) scale(0);
+  animation:tapAnim .5s ease-out forwards;
+}
+@keyframes tapAnim{to{transform:translate(-50%,-50%) scale(2.2);opacity:0;}}
+
+#ph-hud{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+  display:none;align-items:center;gap:8px;
+  background:rgba(8,11,16,.9);backdrop-filter:blur(10px);
+  border:1px solid var(--bdr);border-radius:999px;
+  padding:8px 16px;font-size:12px;font-family:var(--mono);
+  z-index:10002;color:var(--grn);pointer-events:none;
+}
+
+/* ══ COMPUTER ══ */
 #v-computer{background:var(--bg);}
-#pc-form{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;}
-.cbox{width:100%;max-width:380px;background:var(--bg2);border:1px solid var(--bdr);border-radius:20px;padding:2rem;}
-.cbox h2{font-size:1.2rem;font-weight:700;margin-bottom:1.5rem;}
-.flabel{font-family:var(--mono);font-size:10px;letter-spacing:3px;color:var(--mut);margin-bottom:.5rem;}
-.cinput{width:100%;background:var(--bg);border:1px solid var(--bdr);border-radius:10px;color:var(--cyan);font-family:var(--mono);font-size:2rem;letter-spacing:.4em;padding:12px 16px;text-align:center;outline:none;text-transform:uppercase;margin-bottom:1rem;}
+#pc-form{flex:1;display:flex;align-items:center;justify-content:center;padding:2rem;}
+.cbox{width:100%;max-width:360px;background:var(--bg2);border:1px solid var(--bdr);border-radius:18px;padding:2rem;}
+.cbox h2{font-size:1.1rem;font-weight:700;margin-bottom:1.5rem;}
+.flbl{font-family:var(--mono);font-size:10px;letter-spacing:3px;color:var(--mut);margin-bottom:.5rem;}
+.cinput{
+  width:100%;background:var(--bg);border:1px solid var(--bdr);border-radius:10px;
+  color:var(--cyan);font-family:var(--mono);font-size:1.8rem;
+  letter-spacing:.4em;padding:12px 16px;text-align:center;
+  outline:none;text-transform:uppercase;margin-bottom:1rem;
+}
 .cinput:focus{border-color:var(--cyan);}
-.cbtn{width:100%;padding:14px;background:var(--cyan);color:#000;border:none;border-radius:12px;font-family:var(--sans);font-size:15px;font-weight:700;cursor:pointer;transition:.15s;}
-.cbtn:active{transform:scale(.97);}
-.emsg{font-size:12px;color:var(--red);margin-top:.5rem;min-height:16px;font-family:var(--mono);}
+.go-btn{width:100%;padding:13px;background:var(--cyan);color:#000;border:none;border-radius:11px;font-family:var(--sans);font-size:14px;font-weight:700;cursor:pointer;transition:.1s;}
+.go-btn:active{transform:scale(.97);}
+.emsg{font-size:11px;color:var(--red);margin-top:.5rem;min-height:14px;font-family:var(--mono);}
 
+/* Computer viewer */
 #pc-viewer{flex:1;display:none;flex-direction:column;overflow:hidden;}
-#pc-bar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg2);border-bottom:1px solid var(--bdr);flex-shrink:0;}
+#pc-bar{
+  display:flex;align-items:center;gap:8px;padding:8px 12px;
+  background:var(--bg2);border-bottom:1px solid var(--bdr);flex-shrink:0;
+}
 .binfo{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;color:var(--mut);}
 .bsp{flex:1;}
-.tbtn{padding:6px 12px;background:var(--bg3);border:1px solid var(--bdr);border-radius:8px;color:var(--txt);font-size:12px;cursor:pointer;transition:.1s;white-space:nowrap;font-family:var(--sans);}
+.tbtn{padding:6px 12px;background:var(--bg3);border:1px solid var(--bdr);border-radius:8px;color:var(--txt);font-size:12px;cursor:pointer;transition:.1s;font-family:var(--sans);white-space:nowrap;}
 .tbtn:hover{border-color:var(--cyan);color:var(--cyan);}
 .tbtn.on{background:var(--c2);border-color:var(--cyan);color:var(--cyan);}
-.tbtn.rd:hover{border-color:var(--red);color:var(--red);}
+.tbtn.danger:hover{border-color:var(--red);color:var(--red);}
 
-#vp{flex:1;display:flex;align-items:center;justify-content:center;background:#000;position:relative;overflow:hidden;cursor:crosshair;}
-#rvideo{max-width:100%;max-height:100%;display:none;object-fit:contain;pointer-events:none;}
-#nostream{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;pointer-events:none;}
-.spin{width:40px;height:40px;border:2px solid var(--bdr);border-top-color:var(--cyan);border-radius:50%;animation:sp .8s linear infinite;}
+#vp{
+  flex:1;display:flex;align-items:center;justify-content:center;
+  background:#000;position:relative;overflow:hidden;cursor:crosshair;
+}
+#rvid{max-width:100%;max-height:100%;display:none;object-fit:contain;pointer-events:none;}
+
+#no-vid{
+  position:absolute;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:12px;pointer-events:none;
+}
+.spin{width:36px;height:36px;border:2px solid var(--bdr);border-top-color:var(--cyan);border-radius:50%;animation:sp .8s linear infinite;}
 @keyframes sp{to{transform:rotate(360deg)}}
-#nostream p{font-family:var(--mono);font-size:12px;color:var(--mut);}
-#pci{position:absolute;pointer-events:none;width:20px;height:20px;border:1.5px solid var(--cyan);border-radius:50%;opacity:.5;transform:translate(-50%,-50%);display:none;}
-#mbadge{position:absolute;bottom:12px;right:12px;font-family:var(--mono);font-size:11px;padding:4px 10px;background:rgba(0,0,0,.6);border:1px solid var(--bdr);border-radius:6px;color:var(--cyan);pointer-events:none;}
+#no-vid p{font-family:var(--mono);font-size:12px;color:var(--mut);}
+
+#pci{position:absolute;pointer-events:none;width:22px;height:22px;border:1.5px solid var(--cyan);border-radius:50%;opacity:.6;transform:translate(-50%,-50%);display:none;}
+#mbadge{position:absolute;bottom:10px;right:10px;font-family:var(--mono);font-size:10px;padding:3px 8px;background:rgba(0,0,0,.7);border:1px solid var(--bdr);border-radius:6px;color:var(--cyan);pointer-events:none;}
 
 #pc-bot{padding:8px 12px;background:var(--bg2);border-top:1px solid var(--bdr);display:flex;align-items:center;gap:8px;flex-shrink:0;}
 #pc-bot input{flex:1;background:var(--bg3);border:1px solid var(--bdr);border-radius:8px;color:var(--txt);font-family:var(--sans);font-size:13px;padding:8px 12px;outline:none;}
 #pc-bot input:focus{border-color:var(--cyan);}
-.sndbtn{padding:8px 16px;background:var(--cyan);color:#000;border:none;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;}
-.sndbtn:active{transform:scale(.96);}
-#pc-log{font-family:var(--mono);font-size:10px;color:var(--mut);max-height:32px;overflow:hidden;padding:0 12px 6px;background:var(--bg2);flex-shrink:0;}
+.send-btn{padding:8px 16px;background:var(--cyan);color:#000;border:none;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;}
+.send-btn:active{transform:scale(.96);}
+#pc-log{font-family:var(--mono);font-size:10px;color:var(--mut);max-height:28px;overflow:hidden;padding:0 12px 5px;background:var(--bg2);flex-shrink:0;}
 
-/* toast */
-#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--bg3);border:1px solid var(--bdr);border-radius:10px;padding:10px 20px;font-size:13px;font-family:var(--mono);opacity:0;transition:.3s;pointer-events:none;z-index:9000;white-space:nowrap;}
+/* FPS meter */
+#fps{position:absolute;top:8px;left:8px;font-family:var(--mono);font-size:10px;color:rgba(0,212,255,.5);pointer-events:none;background:rgba(0,0,0,.5);padding:2px 6px;border-radius:4px;}
+
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--bg3);border:1px solid var(--bdr);border-radius:10px;padding:9px 18px;font-size:12px;font-family:var(--mono);opacity:0;transition:.3s;pointer-events:none;z-index:99999;white-space:nowrap;}
 </style>
 </head>
 <body>
@@ -117,47 +209,165 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 <div id="v-role" class="view active">
   <div class="wrap">
     <div class="brand">
-      <div class="btag">Remote Link</div>
-      <h1>手機<em>遠端</em>控制</h1>
+      <div class="brand-tag">Remote Link v2</div>
+      <h1>手機<span>遠端控制</span></h1>
     </div>
     <div class="rgrid">
       <div class="rcard" onclick="initPhone()">
-        <div class="ricon">📱</div>
-        <div class="rname">手機</div>
-        <div class="rdesc">在手機打開<br>分享螢幕畫面</div>
+        <div class="ico">📱</div>
+        <h2>手機</h2>
+        <p>被控端<br>顯示螢幕畫面</p>
       </div>
       <div class="rcard" onclick="showPCForm()">
-        <div class="ricon">🖥️</div>
-        <div class="rname">電腦</div>
-        <div class="rdesc">在電腦打開<br>輸入配對碼控制</div>
+        <div class="ico">🖥️</div>
+        <h2>電腦</h2>
+        <p>控制端<br>輸入配對碼控制</p>
       </div>
     </div>
-    <div class="tip">
-      <strong>使用步驟：</strong><br>
-      ① 手機開此網頁 → 選「手機」→ 分享螢幕<br>
-      ② 電腦開此網頁 → 選「電腦」→ 輸入6位配對碼<br>
-      ③ 電腦直接點擊/滑動 = 手機執行對應操作
+    <div class="note">
+      <strong>修正說明：</strong> 此版改用 <code>html2canvas</code> 截圖串流，<br>
+      不需要 <code>getDisplayMedia</code> 權限，Android/iOS 均可使用。<br><br>
+      <strong>步驟：</strong> 手機選「手機」→ 等電腦輸入配對碼連線<br>
+      電腦選「電腦」→ 輸入6位碼 → 看到手機畫面即可操控
     </div>
   </div>
 </div>
 
 <!-- PHONE -->
 <div id="v-phone" class="view">
-  <div id="ph-wait">
-    <div class="cbadge">
-      <div class="clabel">配對碼</div>
-      <div class="cval" id="ph-code">──────</div>
+  <!-- Setup screen (shown before connection) -->
+  <div id="ph-setup">
+    <div class="code-badge">
+      <div class="code-lbl">配對碼</div>
+      <div class="code-num" id="ph-code">──────</div>
     </div>
-    <div class="spill">
+    <div class="status-row">
       <div class="dot wait" id="ph-dot"></div>
       <span id="ph-status">初始化中...</span>
     </div>
-    <button class="sbtn" id="sh-btn" onclick="reqScreen()" disabled>📲 開始分享螢幕</button>
-    <div id="ph-err"></div>
+    <div class="progress-bar" id="ph-progress">
+      <div class="progress-fill" id="ph-pfill"></div>
+    </div>
+    <div id="ph-err" style="font-size:11px;color:var(--red);font-family:var(--mono);min-height:14px;text-align:center;"></div>
   </div>
-  <div id="ph-overlay"></div>
+
+  <!-- Phone OS screen (hidden until connected) -->
+  <div id="ph-screen">
+    <!-- Status bar -->
+    <div class="ph-statusbar">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div class="signal"><span></span><span></span><span></span></div>
+        <span style="font-size:10px;">5G</span>
+      </div>
+      <div id="clock-small" style="font-size:13px;"></div>
+      <div class="batt">
+        <div class="batt-icon"><div class="batt-fill"></div></div>
+        <span style="font-size:10px;">78%</span>
+      </div>
+    </div>
+
+    <!-- Scrollable content -->
+    <div class="ph-content" id="ph-content">
+
+      <!-- Clock widget -->
+      <div class="widget clock-widget">
+        <div class="clock-time" id="big-clock">00:00</div>
+        <div class="clock-date" id="big-date"></div>
+      </div>
+
+      <!-- Quick tiles -->
+      <div class="widget">
+        <div class="widget-title">快速設定</div>
+        <div class="tiles-grid">
+          <div class="tile on" id="tile-wifi" onclick="toggleTile(this,'wifi')">
+            <div class="tile-icon">📶</div>
+            <div class="tile-name">Wi-Fi</div>
+          </div>
+          <div class="tile" id="tile-bt" onclick="toggleTile(this,'bt')">
+            <div class="tile-icon">🔵</div>
+            <div class="tile-name">藍牙</div>
+          </div>
+          <div class="tile on" id="tile-loc" onclick="toggleTile(this,'loc')">
+            <div class="tile-icon">📍</div>
+            <div class="tile-name">定位</div>
+          </div>
+          <div class="tile" id="tile-dnd" onclick="toggleTile(this,'dnd')">
+            <div class="tile-icon">🔕</div>
+            <div class="tile-name">勿擾</div>
+          </div>
+          <div class="tile on" id="tile-bright" onclick="toggleTile(this,'bright')">
+            <div class="tile-icon">☀️</div>
+            <div class="tile-name">亮度</div>
+          </div>
+          <div class="tile" id="tile-rot" onclick="toggleTile(this,'rot')">
+            <div class="tile-icon">🔄</div>
+            <div class="tile-name">旋轉</div>
+          </div>
+          <div class="tile on" id="tile-data" onclick="toggleTile(this,'data')">
+            <div class="tile-icon">📡</div>
+            <div class="tile-name">行動</div>
+          </div>
+          <div class="tile" id="tile-aero" onclick="toggleTile(this,'aero')">
+            <div class="tile-icon">✈️</div>
+            <div class="tile-name">飛航</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notes widget -->
+      <div class="widget">
+        <div class="widget-title">記事本</div>
+        <textarea class="note-area" id="note-area" placeholder="在此輸入筆記...電腦可以點擊這裡然後用鍵盤輸入"></textarea>
+      </div>
+
+      <!-- App grid -->
+      <div class="widget">
+        <div class="widget-title">應用程式</div>
+        <div class="apps-grid">
+          <div class="app-icon" onclick="openApp('calc')">
+            <div class="app-img" style="background:linear-gradient(135deg,#1a2a1a,#2a3a2a);">🧮</div>
+            <div class="app-label">計算機</div>
+          </div>
+          <div class="app-icon" onclick="openApp('browser')">
+            <div class="app-img" style="background:linear-gradient(135deg,#1a1a2e,#2a2a4e);">🌐</div>
+            <div class="app-label">瀏覽器</div>
+          </div>
+          <div class="app-icon" onclick="openApp('camera')">
+            <div class="app-img" style="background:linear-gradient(135deg,#2e1a1a,#4e2a2a);">📷</div>
+            <div class="app-label">相機</div>
+          </div>
+          <div class="app-icon" onclick="openApp('maps')">
+            <div class="app-img" style="background:linear-gradient(135deg,#1a2e2e,#2a4e4e);">🗺️</div>
+            <div class="app-label">地圖</div>
+          </div>
+          <div class="app-icon" onclick="openApp('music')">
+            <div class="app-img" style="background:linear-gradient(135deg,#2e2a1a,#4e3a2a);">🎵</div>
+            <div class="app-label">音樂</div>
+          </div>
+          <div class="app-icon" onclick="openApp('settings')">
+            <div class="app-img" style="background:linear-gradient(135deg,#1e1e1e,#2e2e2e);">⚙️</div>
+            <div class="app-label">設定</div>
+          </div>
+          <div class="app-icon" onclick="openApp('gallery')">
+            <div class="app-img" style="background:linear-gradient(135deg,#2e1a2e,#4e2a4e);">🖼️</div>
+            <div class="app-label">相片</div>
+          </div>
+          <div class="app-icon" onclick="openApp('mail')">
+            <div class="app-img" style="background:linear-gradient(135deg,#1a1e2e,#2a2e4e);">📧</div>
+            <div class="app-label">郵件</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Remote cursor overlay -->
   <div id="rcursor"></div>
-  <div id="ph-hud"><div class="dot ok"></div><span>電腦控制中</span></div>
+  <div id="ph-hud"><div class="dot ok" style="width:6px;height:6px;"></div><span>電腦控制中</span></div>
+
+  <!-- App modal -->
+  <div id="app-modal" style="display:none;position:fixed;inset:0;z-index:20000;background:var(--bg);flex-direction:column;overflow:hidden;"></div>
 </div>
 
 <!-- COMPUTER -->
@@ -165,33 +375,37 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
   <div id="pc-form">
     <div class="cbox">
       <h2>🖥️ 連線至手機</h2>
-      <div class="flabel">輸入手機的配對碼</div>
+      <div class="flbl">輸入手機的配對碼</div>
       <input class="cinput" id="pc-cin" maxlength="6" placeholder="XXXXXX"
         oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')"
         onkeydown="if(event.key==='Enter')pcConn()">
-      <button class="cbtn" onclick="pcConn()">連線</button>
+      <button class="go-btn" onclick="pcConn()">連線</button>
       <div class="emsg" id="pc-err"></div>
     </div>
   </div>
 
   <div id="pc-viewer">
     <div id="pc-bar">
-      <div class="binfo"><div class="dot ok"></div><span id="pc-clabel">已連線</span></div>
+      <div class="binfo"><div class="dot ok"></div><span id="pc-lbl">已連線</span></div>
       <div class="bsp"></div>
       <button class="tbtn on" id="b-click" onclick="setMode('click')">👆 點擊</button>
       <button class="tbtn" id="b-scroll" onclick="setMode('scroll')">↕ 滾動</button>
       <button class="tbtn" id="b-swipe" onclick="setMode('swipe')">⟵ 滑動</button>
-      <button class="tbtn rd" onclick="pcDisc()">✕ 斷線</button>
+      <button class="tbtn danger" onclick="pcDisc()">✕ 斷線</button>
     </div>
     <div id="vp">
-      <video id="rvideo" autoplay playsinline muted></video>
-      <div id="nostream"><div class="spin"></div><p>等待手機分享螢幕...</p></div>
+      <video id="rvid" autoplay playsinline muted></video>
+      <div id="no-vid">
+        <div class="spin"></div>
+        <p id="no-vid-txt">等待手機串流...</p>
+      </div>
       <div id="pci"></div>
       <div id="mbadge">MODE: CLICK</div>
+      <div id="fps">-- fps</div>
     </div>
     <div id="pc-bot">
-      <input type="text" id="pc-msg" placeholder="傳訊息到手機..." onkeydown="if(event.key==='Enter')sndMsg()">
-      <button class="sndbtn" onclick="sndMsg()">送出</button>
+      <input type="text" id="pc-msg" placeholder="傳訊息到手機顯示..." onkeydown="if(event.key==='Enter')sndMsg()">
+      <button class="send-btn" onclick="sndMsg()">送出</button>
     </div>
     <div id="pc-log">&nbsp;</div>
   </div>
@@ -200,16 +414,21 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 <div id="toast"></div>
 
 <script>
-let role=null, peer=null, dconn=null, mcall=null, scStream=null, cmode='click', dnPos=null;
+// ══════════ GLOBAL STATE ══════════
+let peer=null, dconn=null, mcall=null, cmode='click', dnPos=null;
+let streamCanvas=null, captureActive=false;
+let phoneDims={w:390,h:844};
+let fpsCounter=0, fpsLast=Date.now();
 
+// ══════════ UTILITIES ══════════
 function sv(id){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById(id).classList.add('active');
 }
 function toast(m,c){
   const t=document.getElementById('toast');
-  t.textContent=m; t.style.color=c||'var(--txt)';
-  t.style.opacity='1'; t.style.transform='translateX(-50%) translateY(0)';
+  t.textContent=m;t.style.color=c||'var(--txt)';
+  t.style.opacity='1';t.style.transform='translateX(-50%) translateY(0)';
   clearTimeout(t._t);
   t._t=setTimeout(()=>{t.style.opacity='0';t.style.transform='translateX(-50%) translateY(20px)';},3000);
 }
@@ -219,196 +438,467 @@ function genCode(){
   return Array.from({length:6},()=>c[Math.floor(Math.random()*c.length)]).join('');
 }
 
-/* ─── PHONE ─── */
+// ══════════ CLOCK ══════════
+function updateClock(){
+  const now=new Date();
+  const h=String(now.getHours()).padStart(2,'0');
+  const m=String(now.getMinutes()).padStart(2,'0');
+  const s=String(now.getSeconds()).padStart(2,'0');
+  const big=document.getElementById('big-clock');
+  const small=document.getElementById('clock-small');
+  const date=document.getElementById('big-date');
+  if(big)big.textContent=h+':'+m+':'+s;
+  if(small)small.textContent=h+':'+m;
+  const days=['日','一','二','三','四','五','六'];
+  if(date)date.textContent=now.getFullYear()+'年'+(now.getMonth()+1)+'月'+now.getDate()+'日 星期'+days[now.getDay()];
+}
+setInterval(updateClock,1000);
+updateClock();
+
+// ══════════ TILE TOGGLE ══════════
+function toggleTile(el,name){
+  el.classList.toggle('on');
+  if(dconn)dconn.send({type:'tileToggle',name,on:el.classList.contains('on')});
+}
+
+// ══════════ OPEN APP ══════════
+const APPS={
+  calc:{title:'計算機',build:buildCalc},
+  browser:{title:'瀏覽器',build:buildBrowser},
+  music:{title:'音樂',build:buildMusic},
+  settings:{title:'設定',build:buildSettings},
+  camera:{title:'相機',build:buildCamera},
+  maps:{title:'地圖',build:buildMaps},
+  gallery:{title:'相片',build:buildGallery},
+  mail:{title:'郵件',build:buildMail},
+};
+function openApp(name){
+  const modal=document.getElementById('app-modal');
+  modal.innerHTML='';
+  modal.style.display='flex';
+  // header
+  const hdr=document.createElement('div');
+  hdr.style.cssText='display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--bg2);border-bottom:1px solid var(--bdr);flex-shrink:0;';
+  hdr.innerHTML=`<button onclick="closeApp()" style="background:var(--red);border:none;width:28px;height:28px;border-radius:50%;color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+  <span style="font-size:14px;font-weight:600;">${APPS[name]?.title||name}</span>`;
+  modal.appendChild(hdr);
+  const body=document.createElement('div');
+  body.style.cssText='flex:1;overflow:auto;padding:16px;';
+  modal.appendChild(body);
+  if(APPS[name])APPS[name].build(body);
+}
+function closeApp(){
+  document.getElementById('app-modal').style.display='none';
+}
+
+function buildCalc(el){
+  let display='0',prev='',op='';
+  el.style.display='flex';el.style.flexDirection='column';el.style.height='100%';
+  const screen=document.createElement('div');
+  screen.style.cssText='background:var(--bg3);border-radius:12px;padding:16px;text-align:right;margin-bottom:12px;flex-shrink:0;';
+  screen.innerHTML='<div id="cd" style="font-family:var(--mono);font-size:2.2rem;color:var(--txt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">0</div>';
+  el.appendChild(screen);
+  const grid=document.createElement('div');
+  grid.style.cssText='display:grid;grid-template-columns:repeat(4,1fr);gap:8px;flex:1;';
+  const btns=[
+    ['C','±','%','÷'],
+    ['7','8','9','×'],
+    ['4','5','6','−'],
+    ['1','2','3','+'],
+    ['0','.',null,'=']
+  ];
+  btns.forEach(row=>{
+    row.forEach(k=>{
+      if(k===null){const d=document.createElement('div');grid.appendChild(d);return;}
+      const b=document.createElement('button');
+      b.textContent=k;
+      const isOp=['÷','×','−','+','='].includes(k);
+      const isFn=['C','±','%'].includes(k);
+      b.style.cssText=`border:1px solid var(--bdr);border-radius:10px;
+        background:${isOp?'var(--cyan)':isFn?'var(--bg4)':'var(--bg3)'};
+        color:${isOp?'#000':'var(--txt)'};
+        font-size:1.2rem;font-family:var(--mono);cursor:pointer;padding:0;
+        ${k==='0'?'grid-column:span 2;':''}`;
+      b.onclick=()=>{
+        if(k==='C'){display='0';prev='';op='';} 
+        else if(k==='='&&op){
+          const a=parseFloat(prev),b2=parseFloat(display);
+          const res={'÷':a/b2,'×':a*b2,'−':a-b2,'+':a+b2}[op];
+          display=String(Math.round(res*1e10)/1e10);prev='';op='';
+        } else if(['+','−','×','÷'].includes(k)){
+          prev=display;op=k;display='0';
+        } else if(k==='±'){display=String(-parseFloat(display));
+        } else if(k==='%'){display=String(parseFloat(display)/100);
+        } else if(k==='.'){if(!display.includes('.'))display+='.';
+        } else{display=(display==='0'?k:display+k);}
+        document.getElementById('cd').textContent=display;
+      };
+      grid.appendChild(b);
+    });
+  });
+  el.appendChild(grid);
+}
+
+function buildBrowser(el){
+  el.innerHTML=`
+  <div style="display:flex;gap:8px;margin-bottom:12px;">
+    <input id="url-bar" value="https://www.google.com" style="flex:1;background:var(--bg3);border:1px solid var(--bdr);border-radius:8px;color:var(--txt);padding:8px 12px;font-size:13px;outline:none;" onkeydown="if(event.key==='Enter')loadUrl()">
+    <button onclick="loadUrl()" style="padding:8px 14px;background:var(--cyan);color:#000;border:none;border-radius:8px;font-weight:700;cursor:pointer;">Go</button>
+  </div>
+  <iframe id="ph-iframe" src="https://www.google.com" style="width:100%;height:calc(100vh - 180px);border:1px solid var(--bdr);border-radius:10px;" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>`;
+  window.loadUrl=()=>{
+    let u=document.getElementById('url-bar').value;
+    if(!u.startsWith('http'))u='https://'+u;
+    document.getElementById('ph-iframe').src=u;
+  };
+}
+function buildMusic(el){
+  el.innerHTML=`
+  <div style="text-align:center;padding:20px 0;">
+    <div style="width:120px;height:120px;background:linear-gradient(135deg,var(--bg3),var(--bg4));border-radius:50%;margin:0 auto 20px;display:flex;align-items:center;justify-content:center;font-size:3rem;border:2px solid var(--bdr);">🎵</div>
+    <div style="font-size:1.1rem;font-weight:600;margin-bottom:4px;">遠端控制示範曲</div>
+    <div style="font-size:12px;color:var(--mut);margin-bottom:20px;">RemoteLink Band</div>
+    <div style="background:var(--bg3);border-radius:4px;height:4px;margin:0 auto 16px;width:80%;position:relative;">
+      <div id="prog-bar" style="height:100%;background:var(--cyan);border-radius:4px;width:40%;"></div>
+    </div>
+    <div style="display:flex;justify-content:center;gap:20px;font-size:1.8rem;">
+      <span style="cursor:pointer;" onclick="prevSong()">⏮</span>
+      <span id="play-btn" style="cursor:pointer;" onclick="togglePlay()">▶️</span>
+      <span style="cursor:pointer;" onclick="nextSong()">⏭</span>
+    </div>
+  </div>`;
+  let playing=false;
+  let prog=40,timer=null;
+  window.togglePlay=()=>{
+    playing=!playing;
+    document.getElementById('play-btn').textContent=playing?'⏸':'▶️';
+    if(playing){timer=setInterval(()=>{prog=Math.min(100,prog+.2);document.getElementById('prog-bar').style.width=prog+'%';if(prog>=100)clearInterval(timer);},50);}
+    else clearInterval(timer);
+  };
+  window.prevSong=()=>{prog=0;document.getElementById('prog-bar').style.width='0%';};
+  window.nextSong=()=>{prog=100;document.getElementById('prog-bar').style.width='100%';};
+}
+function buildSettings(el){
+  const items=[
+    {icon:'📶',title:'Wi-Fi',sub:'已連接 MyNetwork',toggle:true,on:true},
+    {icon:'🔵',title:'藍牙',sub:'已關閉',toggle:true,on:false},
+    {icon:'🔔',title:'通知',sub:'已開啟',toggle:true,on:true},
+    {icon:'🌙',title:'深色模式',sub:'已啟用',toggle:true,on:true},
+    {icon:'🔋',title:'電池',sub:'78% — 正常',toggle:false},
+    {icon:'📱',title:'關於本機',sub:'RemoteLink OS 1.0',toggle:false},
+  ];
+  el.innerHTML=items.map(i=>`
+  <div style="display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid var(--bdr);">
+    <span style="font-size:1.5rem;width:32px;text-align:center;">${i.icon}</span>
+    <div style="flex:1">
+      <div style="font-size:14px;font-weight:500;">${i.title}</div>
+      <div style="font-size:11px;color:var(--mut);">${i.sub}</div>
+    </div>
+    ${i.toggle?`<div onclick="this.classList.toggle('on');this.style.background=this.classList.contains('on')?'var(--cyan)':'var(--bg4)';" style="width:44px;height:24px;border-radius:12px;background:${i.on?'var(--cyan)':'var(--bg4)'};cursor:pointer;transition:.2s;${i.on?'':''}"></div>`:'<span style="color:var(--mut);font-size:18px;">›</span>'}
+  </div>`).join('');
+}
+function buildCamera(el){
+  el.innerHTML=`<div style="background:var(--bg3);border-radius:12px;aspect-ratio:9/16;max-height:60vh;display:flex;align-items:center;justify-content:center;font-size:3rem;margin-bottom:12px;">📷<br><span style="font-size:12px;color:var(--mut);font-family:var(--mono);">相機預覽</span></div>
+  <div style="display:flex;justify-content:center;gap:20px;">
+    <button style="padding:8px 16px;background:var(--bg3);border:1px solid var(--bdr);border-radius:8px;color:var(--txt);font-size:13px;cursor:pointer;">閃光燈</button>
+    <button style="width:60px;height:60px;background:var(--txt);border:3px solid var(--bg4);border-radius:50%;cursor:pointer;font-size:0;"></button>
+    <button style="padding:8px 16px;background:var(--bg3);border:1px solid var(--bdr);border-radius:8px;color:var(--txt);font-size:13px;cursor:pointer;">前置</button>
+  </div>`;
+}
+function buildMaps(el){
+  el.innerHTML=`<div style="background:var(--bg3);border-radius:12px;height:300px;display:flex;align-items:center;justify-content:center;margin-bottom:12px;position:relative;overflow:hidden;">
+    <div style="position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 29px,rgba(0,212,255,.05) 29px,rgba(0,212,255,.05) 30px),repeating-linear-gradient(90deg,transparent,transparent 29px,rgba(0,212,255,.05) 29px,rgba(0,212,255,.05) 30px);"></div>
+    <div style="position:relative;text-align:center;">📍<br><span style="font-size:12px;color:var(--mut);">台中市</span></div>
+  </div>
+  <input style="width:100%;background:var(--bg3);border:1px solid var(--bdr);border-radius:8px;color:var(--txt);padding:10px 14px;font-size:13px;outline:none;" placeholder="搜尋地點...">`;
+}
+function buildGallery(el){
+  el.innerHTML='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">'
+    +Array.from({length:9},(_,i)=>`<div style="aspect-ratio:1;background:var(--bg${(i%3)+2});border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;cursor:pointer;">${['🌅','🌃','🌄','🏙️','🌌','🌊','🌸','🍀','🌺'][i]}</div>`).join('')+'</div>';
+}
+function buildMail(el){
+  const mails=[
+    {from:'工作通知',sub:'今日排程提醒',time:'09:41',unread:true},
+    {from:'RemoteLink',sub:'系統已成功連線',time:'09:30',unread:true},
+    {from:'新聞快訊',sub:'科技版頭條新聞',time:'昨天',unread:false},
+    {from:'好友',sub:'週末一起打球嗎？',time:'昨天',unread:false},
+  ];
+  el.innerHTML=mails.map(m=>`
+  <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--bdr);cursor:pointer;">
+    <div style="width:40px;height:40px;border-radius:50%;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;">✉️</div>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:13px;font-weight:${m.unread?'700':'400'};display:flex;justify-content:space-between;">
+        <span>${m.from}</span><span style="font-size:11px;color:var(--mut);">${m.time}</span>
+      </div>
+      <div style="font-size:12px;color:var(--mut);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">${m.sub}</div>
+    </div>
+    ${m.unread?`<div style="width:8px;height:8px;border-radius:50%;background:var(--cyan);flex-shrink:0;"></div>`:''}
+  </div>`).join('');
+}
+
+// ══════════ PHONE INIT ══════════
 function initPhone(){
-  role='phone'; sv('v-phone');
+  sv('v-phone');
+  phoneDims={w:window.innerWidth,h:window.innerHeight};
+
   const code=genCode();
   document.getElementById('ph-code').textContent=code;
   document.getElementById('ph-status').textContent='建立連線點...';
 
   peer=new Peer('rl-'+code,{debug:0});
   peer.on('open',()=>{
-    document.getElementById('ph-status').textContent='等待電腦連線...';
-    document.getElementById('sh-btn').disabled=false;
+    document.getElementById('ph-status').textContent='等待電腦連線 (配對碼: '+code+')';
+    document.getElementById('ph-dot').className='dot wait';
   });
   peer.on('error',e=>{
     if(e.type==='unavailable-id'){peer.destroy();initPhone();return;}
     document.getElementById('ph-err').textContent='錯誤: '+e.type;
   });
+
+  // Data connection from computer
   peer.on('connection',c=>{
     dconn=c;
     c.on('open',()=>{
       document.getElementById('ph-dot').className='dot ok';
-      document.getElementById('ph-status').textContent='電腦已連線！';
+      document.getElementById('ph-status').textContent='電腦已連線，準備串流...';
+      // Send phone dimensions to computer
+      c.send({type:'dims',w:window.innerWidth,h:window.innerHeight});
+      // Show phone screen
+      document.getElementById('ph-setup').style.display='none';
+      document.getElementById('ph-screen').style.display='flex';
       document.getElementById('ph-hud').style.display='flex';
-      toast('電腦已連線','var(--grn)');
+      toast('電腦已連線！','var(--grn)');
     });
     c.on('data',handleCmd);
     c.on('close',phDisc);
   });
+
+  // Media call from computer
   peer.on('call',call=>{
     mcall=call;
-    call.answer(scStream||new MediaStream());
-    call.on('close',phDisc);
+    // Start canvas capture stream
+    startCanvasStream().then(stream=>{
+      call.answer(stream);
+    });
+    call.on('close',()=>{captureActive=false;});
   });
 }
 
-async function reqScreen(){
-  const btn=document.getElementById('sh-btn');
-  btn.disabled=true; btn.textContent='請求中...';
-  try{
-    scStream=await navigator.mediaDevices.getDisplayMedia({
-      video:{frameRate:{ideal:30},width:{ideal:1280}},audio:false
-    });
-    btn.textContent='✅ 分享中';
-    document.getElementById('ph-status').textContent='螢幕分享中，等待電腦連線...';
-    toast('螢幕分享成功！讓電腦輸入配對碼','var(--grn)');
-    scStream.getVideoTracks()[0].onended=()=>{
-      toast('螢幕分享已停止','var(--red)');
-      btn.textContent='📲 重新分享'; btn.disabled=false; scStream=null;
-    };
-    if(mcall&&mcall.peerConnection){
-      const s=mcall.peerConnection.getSenders().find(s=>s.track?.kind==='video');
-      if(s)s.replaceTrack(scStream.getVideoTracks()[0]);
-    }
-  }catch(err){
-    btn.disabled=false; btn.textContent='📲 開始分享螢幕';
-    const msgs={NotAllowedError:'請允許螢幕分享權限',NotSupportedError:'瀏覽器不支援（請用 Android Chrome）'};
-    document.getElementById('ph-err').textContent=msgs[err.name]||'失敗: '+err.message;
-  }
+// ══════════ CANVAS STREAM (no getDisplayMedia needed!) ══════════
+async function startCanvasStream(){
+  streamCanvas=document.createElement('canvas');
+  streamCanvas.width=window.innerWidth;
+  streamCanvas.height=window.innerHeight;
+
+  const mediaStream=streamCanvas.captureStream(30);
+
+  captureActive=true;
+  captureLoop();
+
+  return mediaStream;
 }
 
+async function captureLoop(){
+  if(!captureActive)return;
+
+  // Temporarily hide remote cursor during capture
+  const cur=document.getElementById('rcursor');
+  const hud=document.getElementById('ph-hud');
+  const wasVisible=cur.style.display;
+  cur.style.display='none';
+  hud.style.display='none';
+
+  try{
+    await html2canvas(document.getElementById('ph-screen'),{
+      canvas:streamCanvas,
+      width:window.innerWidth,
+      height:window.innerHeight,
+      windowWidth:window.innerWidth,
+      windowHeight:window.innerHeight,
+      useCORS:true,
+      allowTaint:true,
+      logging:false,
+      scale:1,
+      backgroundColor:'#080b10',
+      ignoreElements:el=>el.id==='rcursor'||el.id==='ph-hud'||el.id==='toast',
+    });
+  }catch(e){
+    // Draw fallback
+    const ctx=streamCanvas.getContext('2d');
+    ctx.fillStyle='#080b10';
+    ctx.fillRect(0,0,streamCanvas.width,streamCanvas.height);
+    ctx.fillStyle='#4a5c74';
+    ctx.font='14px monospace';
+    ctx.fillText('Rendering...',20,40);
+  }
+
+  // Restore cursor
+  cur.style.display=wasVisible;
+  hud.style.display='flex';
+
+  // Repeat (target ~8fps to balance performance)
+  setTimeout(captureLoop, dconn?120:500);
+}
+
+// ══════════ HANDLE REMOTE COMMANDS ══════════
 function handleCmd(d){
   if(!d||!d.type)return;
   const cur=document.getElementById('rcursor');
-  const ov=document.getElementById('ph-overlay');
 
   if(d.type==='move'){
     cur.style.display='block';
     cur.style.left=(d.x*window.innerWidth)+'px';
     cur.style.top=(d.y*window.innerHeight)+'px';
-    ov.style.display='block';
     return;
   }
+
   if(d.type==='tap'){
-    const cx=d.x*window.innerWidth, cy=d.y*window.innerHeight;
+    const cx=d.x*window.innerWidth;
+    const cy=d.y*window.innerHeight;
     cur.style.display='block';
-    cur.style.left=cx+'px'; cur.style.top=cy+'px';
+    cur.style.left=cx+'px';
+    cur.style.top=cy+'px';
+    // Ripple
     const r=document.createElement('div');
-    r.className='ripple'; r.style.left=cx+'px'; r.style.top=cy+'px';
+    r.className='tap-ring';
+    r.style.left=cx+'px';
+    r.style.top=cy+'px';
     document.body.appendChild(r);
     setTimeout(()=>r.remove(),600);
-    ov.style.pointerEvents='none';
-    const el=document.elementFromPoint(cx,cy);
-    ov.style.pointerEvents='';
-    if(el&&el!==ov&&el!==cur){
-      try{
-        el.dispatchEvent(new MouseEvent('mousedown',{bubbles:true,cancelable:true,clientX:cx,clientY:cy}));
-        el.dispatchEvent(new MouseEvent('mouseup',{bubbles:true,cancelable:true,clientX:cx,clientY:cy}));
-        el.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,clientX:cx,clientY:cy}));
-      }catch(e){}
-      try{
-        const t=new Touch({identifier:Date.now(),target:el,clientX:cx,clientY:cy,pageX:cx,pageY:cy,screenX:cx,screenY:cy});
-        el.dispatchEvent(new TouchEvent('touchstart',{bubbles:true,cancelable:true,touches:[t],targetTouches:[t],changedTouches:[t]}));
-        setTimeout(()=>{
-          el.dispatchEvent(new TouchEvent('touchend',{bubbles:true,cancelable:true,touches:[],targetTouches:[],changedTouches:[t]}));
-        },50);
-      }catch(e){}
+    // Dispatch click
+    const tgt=document.elementFromPoint(cx,cy);
+    if(tgt&&tgt!==cur){
+      tgt.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,clientX:cx,clientY:cy}));
+      // Focus inputs
+      if(tgt.tagName==='INPUT'||tgt.tagName==='TEXTAREA')tgt.focus();
     }
-    if(navigator.vibrate)navigator.vibrate(30);
+    if(navigator.vibrate)navigator.vibrate(25);
     return;
   }
+
   if(d.type==='scroll'){
-    window.scrollBy({top:d.dy*250,behavior:'smooth'});
+    const sc=document.getElementById('ph-content');
+    if(sc)sc.scrollBy({top:d.dy*160,behavior:'smooth'});
     return;
   }
+
   if(d.type==='swipe'){
-    const cx=d.x*window.innerWidth, cy=d.y*window.innerHeight;
-    const ex=d.ex*window.innerWidth, ey=d.ey*window.innerHeight;
-    ov.style.pointerEvents='none';
-    const el=document.elementFromPoint(cx,cy)||document.body;
-    ov.style.pointerEvents='';
-    try{
-      const mk=(x,y)=>new Touch({identifier:1,target:el,clientX:x,clientY:y,pageX:x,pageY:y,screenX:x,screenY:y});
-      const ts=mk(cx,cy), te=mk(ex,ey);
-      el.dispatchEvent(new TouchEvent('touchstart',{bubbles:true,cancelable:true,touches:[ts],targetTouches:[ts],changedTouches:[ts]}));
-      setTimeout(()=>{
-        el.dispatchEvent(new TouchEvent('touchmove',{bubbles:true,cancelable:true,touches:[te],targetTouches:[te],changedTouches:[te]}));
-        setTimeout(()=>{
-          el.dispatchEvent(new TouchEvent('touchend',{bubbles:true,cancelable:true,touches:[],targetTouches:[],changedTouches:[te]}));
-        },100);
-      },100);
-    }catch(e){}
-    if(navigator.vibrate)navigator.vibrate([20,30,20]);
+    const sc=document.getElementById('ph-content');
+    if(sc){
+      const dx=(d.ex-d.x)*window.innerWidth;
+      const dy=(d.ey-d.y)*window.innerHeight;
+      sc.scrollBy({top:dy>0?-300:300,behavior:'smooth'});
+    }
     return;
   }
-  if(d.type==='msg'){toast('💬 '+d.text);return;}
-  if(d.type==='vibrate'){
-    if(navigator.vibrate)navigator.vibrate([100,50,100,50,100]);
-    toast('📳 震動','var(--amb)');
-    return;
-  }
+
   if(d.type==='key'){
+    const active=document.activeElement;
+    if(active&&(active.tagName==='INPUT'||active.tagName==='TEXTAREA')){
+      if(d.key==='Backspace'){
+        active.value=active.value.slice(0,-1);
+      }else if(d.key.length===1){
+        active.value+=d.key;
+      }
+    }
     document.dispatchEvent(new KeyboardEvent('keydown',{key:d.key,bubbles:true}));
+    return;
+  }
+
+  if(d.type==='msg'){
+    toast('💬 '+d.text);
+    return;
+  }
+
+  if(d.type==='vibrate'){
+    if(navigator.vibrate)navigator.vibrate([80,40,80,40,120]);
+    toast('📳 震動','var(--amb)');
     return;
   }
 }
 
 function phDisc(){
+  captureActive=false;
   document.getElementById('ph-dot').className='dot wait';
-  document.getElementById('ph-status').textContent='電腦已斷線...';
+  document.getElementById('ph-screen').style.display='none';
+  document.getElementById('ph-setup').style.display='flex';
+  document.getElementById('ph-status').textContent='電腦已斷線，等待重連...';
   document.getElementById('ph-hud').style.display='none';
   document.getElementById('rcursor').style.display='none';
   toast('電腦已斷線','var(--red)');
-  dconn=null; mcall=null;
+  dconn=null;mcall=null;
 }
 
-/* ─── COMPUTER ─── */
-function showPCForm(){role='computer';sv('v-computer');}
+// ══════════ COMPUTER ══════════
+function showPCForm(){sv('v-computer');}
 
 function pcConn(){
   const code=document.getElementById('pc-cin').value.trim().toUpperCase();
   if(code.length!==6){document.getElementById('pc-err').textContent='請輸入完整6位碼';return;}
   document.getElementById('pc-err').textContent='';
+
   peer=new Peer({debug:0});
   peer.on('open',()=>{
     dconn=peer.connect('rl-'+code,{reliable:true});
     dconn.on('open',()=>{
       plog('資料通道已連線');
-      toast('已連線','var(--grn)');
-      document.getElementById('pc-clabel').textContent='已連線 · CODE: '+code;
-      // Media call
-      const call=peer.call('rl-'+code,new MediaStream());
-      mcall=call;
-      call.on('stream',rs=>{
-        const v=document.getElementById('rvideo');
-        v.srcObject=rs; v.play().catch(()=>{});
-        v.style.display='block';
-        document.getElementById('nostream').style.display='none';
-        plog('影像串流已接收');
-        toast('已接收手機螢幕！','var(--grn)');
-      });
-      call.on('error',e=>plog('媒體錯誤: '+e));
+      toast('資料通道已連線','var(--grn)');
+      document.getElementById('pc-lbl').textContent='已連線 · '+code;
+    });
+    dconn.on('data',d=>{
+      if(d.type==='dims'){phoneDims={w:d.w,h:d.h};plog('手機尺寸: '+d.w+'×'+d.h);}
     });
     dconn.on('close',()=>{toast('連線中斷','var(--red)');pcDisc();});
     dconn.on('error',()=>{document.getElementById('pc-err').textContent='連線失敗，請確認配對碼';});
+
+    // Media call
+    const call=peer.call('rl-'+code,new MediaStream());
+    mcall=call;
+    call.on('stream',rs=>{
+      const v=document.getElementById('rvid');
+      v.srcObject=rs;
+      v.play().catch(()=>{});
+      v.style.display='block';
+      document.getElementById('no-vid').style.display='none';
+      plog('影像串流已接收');
+      toast('已接收手機畫面！','var(--grn)');
+      startFPS(v);
+    });
+    call.on('error',e=>plog('媒體錯誤: '+e));
+
     document.getElementById('pc-form').style.display='none';
     document.getElementById('pc-viewer').style.display='flex';
     setupVP();
   });
   peer.on('error',e=>{
-    const msg=e.type==='peer-unavailable'?'找不到手機，請確認配對碼':'錯誤: '+e.type;
-    document.getElementById('pc-err').textContent=msg;
+    const m=e.type==='peer-unavailable'?'找不到手機，請確認配對碼':'錯誤: '+e.type;
+    document.getElementById('pc-err').textContent=m;
     peer.destroy();peer=null;
   });
 }
 
+function startFPS(video){
+  let frames=0, last=Date.now();
+  const cv=document.createElement('canvas');cv.width=2;cv.height=2;
+  const ctx=cv.getContext('2d');
+  function tick(){
+    try{ctx.drawImage(video,0,0,2,2);frames++;}catch(e){}
+    const now=Date.now();
+    if(now-last>=1000){
+      document.getElementById('fps').textContent=frames+' fps';
+      frames=0;last=now;
+    }
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+
 function setupVP(){
   const vp=document.getElementById('vp');
-  const video=document.getElementById('rvideo');
+  const video=document.getElementById('rvid');
   const ci=document.getElementById('pci');
 
-  function relPos(e){
+  function rel(e){
     const r=video.getBoundingClientRect();
     if(!r.width||!r.height)return null;
     const cx=e.touches?e.touches[0].clientX:e.clientX;
@@ -421,67 +911,64 @@ function setupVP(){
   }
 
   vp.addEventListener('mousemove',e=>{
-    const p=relPos(e);
+    const p=rel(e);
     if(!p||!dconn)return;
-    const vr=vp.getBoundingClientRect();
-    const vvr=video.getBoundingClientRect();
+    const vpR=vp.getBoundingClientRect();
+    const vidR=video.getBoundingClientRect();
     ci.style.display='block';
-    ci.style.left=(e.clientX-vr.left)+'px';
-    ci.style.top=(e.clientY-vr.top)+'px';
+    ci.style.left=(e.clientX-vpR.left)+'px';
+    ci.style.top=(e.clientY-vpR.top)+'px';
     dconn.send({type:'move',x:p.x,y:p.y});
   });
   vp.addEventListener('mouseleave',()=>{ci.style.display='none';});
 
   let dn=false;
-  vp.addEventListener('pointerdown',e=>{e.preventDefault();dn=true;dnPos=relPos(e);});
+  vp.addEventListener('pointerdown',e=>{e.preventDefault();dn=true;dnPos=rel(e);});
   vp.addEventListener('pointerup',e=>{
-    if(!dn)return; dn=false;
-    const up=relPos(e);
+    if(!dn)return;dn=false;
+    const up=rel(e);
     if(!up||!dconn)return;
-    const dx=up.x-(dnPos?.x||up.x), dy=up.y-(dnPos?.y||up.y);
+    const dx=up.x-(dnPos?.x||up.x),dy=up.y-(dnPos?.y||up.y);
     const dist=Math.sqrt(dx*dx+dy*dy);
-    if(cmode==='click'||dist<0.02){
-      dconn.send({type:'tap',x:up.x,y:up.y});
-      plog('TAP ('+Math.round(up.x*100)+'%, '+Math.round(up.y*100)+'%)');
-    }else if(cmode==='swipe'&&dnPos){
+    if(cmode==='swipe'&&dist>0.03&&dnPos){
       dconn.send({type:'swipe',x:dnPos.x,y:dnPos.y,ex:up.x,ey:up.y});
       plog('SWIPE');
+    } else {
+      dconn.send({type:'tap',x:up.x,y:up.y});
+      plog('TAP ('+Math.round(up.x*100)+'%, '+Math.round(up.y*100)+'%)');
     }
   });
+
   vp.addEventListener('wheel',e=>{
     e.preventDefault();
     if(!dconn)return;
     dconn.send({type:'scroll',dy:e.deltaY>0?1:-1});
   },{passive:false});
 
+  // Keyboard → phone
   document.addEventListener('keydown',e=>{
     if(!dconn||e.target.tagName==='INPUT')return;
-    const keys=['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Enter','Escape',' ','Backspace'];
-    if(keys.includes(e.key)){
+    const fwdKeys=['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Enter','Escape',' ','Backspace'];
+    if(fwdKeys.includes(e.key)||(e.key.length===1&&!e.ctrlKey&&!e.metaKey)){
       e.preventDefault();
       dconn.send({type:'key',key:e.key});
-      plog('KEY: '+e.key);
     }
   });
 }
 
 function setMode(m){
   cmode=m;
-  ['click','scroll','swipe'].forEach(x=>{
-    document.getElementById('b-'+x).classList.toggle('on',x===m);
-  });
+  ['click','scroll','swipe'].forEach(x=>document.getElementById('b-'+x).classList.toggle('on',x===m));
   document.getElementById('mbadge').textContent='MODE: '+m.toUpperCase();
-  const cursors={click:'crosshair',scroll:'ns-resize',swipe:'ew-resize'};
-  document.getElementById('vp').style.cursor=cursors[m];
+  const cur={click:'crosshair',scroll:'ns-resize',swipe:'ew-resize'};
+  document.getElementById('vp').style.cursor=cur[m];
 }
 
 function sndMsg(){
-  const inp=document.getElementById('pc-msg');
-  const t=inp.value.trim();
-  if(!t||!dconn)return;
-  dconn.send({type:'msg',text:t});
-  inp.value='';
-  plog('MSG: '+t);
+  const i=document.getElementById('pc-msg');
+  if(!i.value.trim()||!dconn)return;
+  dconn.send({type:'msg',text:i.value.trim()});
+  i.value='';
 }
 
 function pcDisc(){
@@ -491,9 +978,9 @@ function pcDisc(){
   dconn=null;mcall=null;peer=null;
   document.getElementById('pc-form').style.display='flex';
   document.getElementById('pc-viewer').style.display='none';
-  const v=document.getElementById('rvideo');
-  v.srcObject=null; v.style.display='none';
-  document.getElementById('nostream').style.display='flex';
+  const v=document.getElementById('rvid');
+  v.srcObject=null;v.style.display='none';
+  document.getElementById('no-vid').style.display='flex';
   document.getElementById('pc-cin').value='';
 }
 </script>
