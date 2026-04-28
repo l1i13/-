@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>RemoteLink — 手機遠端控制</title>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=DM+Sans:wght@300;400;500;700&display=swap');
+
+:root {
+  --bg:   #080b10;
+  --bg2:  #0e1219;
+  --bg3:  #151c27;
+  --bg4:  #1c2535;
+  --cyan: #00d4ff;
+  --c2:   rgba(0,212,255,.12);
+  --grn:  #00ff88;
+  --red:  #ff3b5c;
+  --amb:  #ffb830;
+  --txt:  #dde8f8;
+  --mut:  #4a5c74;
+  --bdr:  rgba(0,212,255,.18);
+  --mono: 'Share Tech Mono', monospace;
+  --sans: 'DM Sans', sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{width:100%;height:100%;background:var(--bg);color:var(--txt);font-family:var(--sans);overflow:hidden;}
+body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.06) 2px,rgba(0,0,0,.06) 4px);pointer-events:none;z-index:9999;}
+
+.view{display:none;width:100%;height:100%;}
+.view.active{display:flex;flex-direction:column;}
+
+/* ── ROLE ── */
+#v-role{align-items:center;justify-content:center;background:radial-gradient(ellipse 100% 80% at 50% 0%,rgba(0,212,255,.07),transparent 70%);}
+.wrap{width:100%;max-width:440px;padding:2rem 1.5rem;}
+.brand{text-align:center;margin-bottom:3rem;}
+.btag{font-family:var(--mono);font-size:10px;letter-spacing:5px;color:var(--cyan);opacity:.6;text-transform:uppercase;margin-bottom:.5rem;}
+.brand h1{font-size:2.4rem;font-weight:700;letter-spacing:-1.5px;line-height:1;}
+.brand h1 em{color:var(--cyan);font-style:normal;}
+.rgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.rcard{background:var(--bg3);border:1px solid var(--bdr);border-radius:18px;padding:1.75rem 1rem;text-align:center;cursor:pointer;transition:transform .15s,border-color .15s,background .15s;}
+.rcard:hover{border-color:var(--cyan);background:var(--c2);transform:translateY(-2px);}
+.rcard:active{transform:scale(.97);}
+.ricon{font-size:2.8rem;margin-bottom:.75rem;}
+.rname{font-size:1rem;font-weight:700;margin-bottom:.25rem;}
+.rdesc{font-size:11px;color:var(--mut);line-height:1.5;}
+.tip{margin-top:1.75rem;padding:12px 16px;background:rgba(255,184,48,.06);border:1px solid rgba(255,184,48,.2);border-radius:10px;font-size:12px;color:#a8843a;line-height:1.6;}
+.tip strong{color:var(--amb);}
+
+/* ── PHONE ── */
+#v-phone{position:relative;background:var(--bg);}
+#ph-wait{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;gap:1.5rem;}
+.cbadge{background:var(--bg3);border:1px solid var(--bdr);border-radius:16px;padding:1.5rem 2rem;text-align:center;}
+.clabel{font-family:var(--mono);font-size:10px;letter-spacing:4px;color:var(--mut);margin-bottom:.5rem;}
+.cval{font-family:var(--mono);font-size:3rem;letter-spacing:.4em;color:var(--cyan);text-shadow:0 0 20px rgba(0,212,255,.5);}
+.spill{display:flex;align-items:center;gap:8px;padding:8px 16px;background:var(--bg3);border:1px solid var(--bdr);border-radius:999px;font-size:13px;font-family:var(--mono);color:var(--mut);}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--mut);flex-shrink:0;}
+.dot.wait{background:var(--amb);box-shadow:0 0 6px var(--amb);animation:blink 1s infinite;}
+.dot.ok{background:var(--grn);box-shadow:0 0 8px var(--grn);animation:blink 2s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.sbtn{width:100%;padding:14px;background:var(--cyan);color:#000;border:none;border-radius:12px;font-family:var(--sans);font-size:15px;font-weight:700;cursor:pointer;transition:.15s;}
+.sbtn:active{transform:scale(.97);background:#00bce0;}
+.sbtn:disabled{background:var(--bg4);color:var(--mut);cursor:default;}
+#ph-err{font-size:12px;color:var(--red);text-align:center;font-family:var(--mono);min-height:16px;}
+
+#ph-overlay{display:none;position:fixed;inset:0;z-index:8000;}
+#rcursor{position:fixed;width:28px;height:28px;border:2.5px solid var(--cyan);border-radius:50%;background:rgba(0,212,255,.15);transform:translate(-50%,-50%);pointer-events:none;transition:left .06s linear,top .06s linear;box-shadow:0 0 12px rgba(0,212,255,.5);display:none;z-index:8001;}
+.ripple{position:fixed;width:44px;height:44px;border:2px solid var(--cyan);border-radius:50%;transform:translate(-50%,-50%) scale(0);pointer-events:none;animation:ra .55s ease-out forwards;z-index:8002;}
+@keyframes ra{to{transform:translate(-50%,-50%) scale(2.5);opacity:0;}}
+#ph-hud{position:fixed;top:12px;left:50%;transform:translateX(-50%);display:none;align-items:center;gap:8px;background:rgba(10,13,18,.88);backdrop-filter:blur(8px);border:1px solid var(--bdr);border-radius:999px;padding:6px 14px;font-size:12px;font-family:var(--mono);z-index:8003;color:var(--grn);pointer-events:none;}
+
+/* ── COMPUTER ── */
+#v-computer{background:var(--bg);}
+#pc-form{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;}
+.cbox{width:100%;max-width:380px;background:var(--bg2);border:1px solid var(--bdr);border-radius:20px;padding:2rem;}
+.cbox h2{font-size:1.2rem;font-weight:700;margin-bottom:1.5rem;}
+.flabel{font-family:var(--mono);font-size:10px;letter-spacing:3px;color:var(--mut);margin-bottom:.5rem;}
+.cinput{width:100%;background:var(--bg);border:1px solid var(--bdr);border-radius:10px;color:var(--cyan);font-family:var(--mono);font-size:2rem;letter-spacing:.4em;padding:12px 16px;text-align:center;outline:none;text-transform:uppercase;margin-bottom:1rem;}
+.cinput:focus{border-color:var(--cyan);}
+.cbtn{width:100%;padding:14px;background:var(--cyan);color:#000;border:none;border-radius:12px;font-family:var(--sans);font-size:15px;font-weight:700;cursor:pointer;transition:.15s;}
+.cbtn:active{transform:scale(.97);}
+.emsg{font-size:12px;color:var(--red);margin-top:.5rem;min-height:16px;font-family:var(--mono);}
+
+#pc-viewer{flex:1;display:none;flex-direction:column;overflow:hidden;}
+#pc-bar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg2);border-bottom:1px solid var(--bdr);flex-shrink:0;}
+.binfo{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;color:var(--mut);}
+.bsp{flex:1;}
+.tbtn{padding:6px 12px;background:var(--bg3);border:1px solid var(--bdr);border-radius:8px;color:var(--txt);font-size:12px;cursor:pointer;transition:.1s;white-space:nowrap;font-family:var(--sans);}
+.tbtn:hover{border-color:var(--cyan);color:var(--cyan);}
+.tbtn.on{background:var(--c2);border-color:var(--cyan);color:var(--cyan);}
+.tbtn.rd:hover{border-color:var(--red);color:var(--red);}
+
+#vp{flex:1;display:flex;align-items:center;justify-content:center;background:#000;position:relative;overflow:hidden;cursor:crosshair;}
+#rvideo{max-width:100%;max-height:100%;display:none;object-fit:contain;pointer-events:none;}
+#nostream{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;pointer-events:none;}
+.spin{width:40px;height:40px;border:2px solid var(--bdr);border-top-color:var(--cyan);border-radius:50%;animation:sp .8s linear infinite;}
+@keyframes sp{to{transform:rotate(360deg)}}
+#nostream p{font-family:var(--mono);font-size:12px;color:var(--mut);}
+#pci{position:absolute;pointer-events:none;width:20px;height:20px;border:1.5px solid var(--cyan);border-radius:50%;opacity:.5;transform:translate(-50%,-50%);display:none;}
+#mbadge{position:absolute;bottom:12px;right:12px;font-family:var(--mono);font-size:11px;padding:4px 10px;background:rgba(0,0,0,.6);border:1px solid var(--bdr);border-radius:6px;color:var(--cyan);pointer-events:none;}
+
+#pc-bot{padding:8px 12px;background:var(--bg2);border-top:1px solid var(--bdr);display:flex;align-items:center;gap:8px;flex-shrink:0;}
+#pc-bot input{flex:1;background:var(--bg3);border:1px solid var(--bdr);border-radius:8px;color:var(--txt);font-family:var(--sans);font-size:13px;padding:8px 12px;outline:none;}
+#pc-bot input:focus{border-color:var(--cyan);}
+.sndbtn{padding:8px 16px;background:var(--cyan);color:#000;border:none;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;}
+.sndbtn:active{transform:scale(.96);}
+#pc-log{font-family:var(--mono);font-size:10px;color:var(--mut);max-height:32px;overflow:hidden;padding:0 12px 6px;background:var(--bg2);flex-shrink:0;}
+
+/* toast */
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--bg3);border:1px solid var(--bdr);border-radius:10px;padding:10px 20px;font-size:13px;font-family:var(--mono);opacity:0;transition:.3s;pointer-events:none;z-index:9000;white-space:nowrap;}
+</style>
+</head>
+<body>
+
+<!-- ROLE SELECT -->
+<div id="v-role" class="view active">
+  <div class="wrap">
+    <div class="brand">
+      <div class="btag">Remote Link</div>
+      <h1>手機<em>遠端</em>控制</h1>
+    </div>
+    <div class="rgrid">
+      <div class="rcard" onclick="initPhone()">
+        <div class="ricon">📱</div>
+        <div class="rname">手機</div>
+        <div class="rdesc">在手機打開<br>分享螢幕畫面</div>
+      </div>
+      <div class="rcard" onclick="showPCForm()">
+        <div class="ricon">🖥️</div>
+        <div class="rname">電腦</div>
+        <div class="rdesc">在電腦打開<br>輸入配對碼控制</div>
+      </div>
+    </div>
+    <div class="tip">
+      <strong>使用步驟：</strong><br>
+      ① 手機開此網頁 → 選「手機」→ 分享螢幕<br>
+      ② 電腦開此網頁 → 選「電腦」→ 輸入6位配對碼<br>
+      ③ 電腦直接點擊/滑動 = 手機執行對應操作
+    </div>
+  </div>
+</div>
+
+<!-- PHONE -->
+<div id="v-phone" class="view">
+  <div id="ph-wait">
+    <div class="cbadge">
+      <div class="clabel">配對碼</div>
+      <div class="cval" id="ph-code">──────</div>
+    </div>
+    <div class="spill">
+      <div class="dot wait" id="ph-dot"></div>
+      <span id="ph-status">初始化中...</span>
+    </div>
+    <button class="sbtn" id="sh-btn" onclick="reqScreen()" disabled>📲 開始分享螢幕</button>
+    <div id="ph-err"></div>
+  </div>
+  <div id="ph-overlay"></div>
+  <div id="rcursor"></div>
+  <div id="ph-hud"><div class="dot ok"></div><span>電腦控制中</span></div>
+</div>
+
+<!-- COMPUTER -->
+<div id="v-computer" class="view">
+  <div id="pc-form">
+    <div class="cbox">
+      <h2>🖥️ 連線至手機</h2>
+      <div class="flabel">輸入手機的配對碼</div>
+      <input class="cinput" id="pc-cin" maxlength="6" placeholder="XXXXXX"
+        oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')"
+        onkeydown="if(event.key==='Enter')pcConn()">
+      <button class="cbtn" onclick="pcConn()">連線</button>
+      <div class="emsg" id="pc-err"></div>
+    </div>
+  </div>
+
+  <div id="pc-viewer">
+    <div id="pc-bar">
+      <div class="binfo"><div class="dot ok"></div><span id="pc-clabel">已連線</span></div>
+      <div class="bsp"></div>
+      <button class="tbtn on" id="b-click" onclick="setMode('click')">👆 點擊</button>
+      <button class="tbtn" id="b-scroll" onclick="setMode('scroll')">↕ 滾動</button>
+      <button class="tbtn" id="b-swipe" onclick="setMode('swipe')">⟵ 滑動</button>
+      <button class="tbtn rd" onclick="pcDisc()">✕ 斷線</button>
+    </div>
+    <div id="vp">
+      <video id="rvideo" autoplay playsinline muted></video>
+      <div id="nostream"><div class="spin"></div><p>等待手機分享螢幕...</p></div>
+      <div id="pci"></div>
+      <div id="mbadge">MODE: CLICK</div>
+    </div>
+    <div id="pc-bot">
+      <input type="text" id="pc-msg" placeholder="傳訊息到手機..." onkeydown="if(event.key==='Enter')sndMsg()">
+      <button class="sndbtn" onclick="sndMsg()">送出</button>
+    </div>
+    <div id="pc-log">&nbsp;</div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+let role=null, peer=null, dconn=null, mcall=null, scStream=null, cmode='click', dnPos=null;
+
+function sv(id){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function toast(m,c){
+  const t=document.getElementById('toast');
+  t.textContent=m; t.style.color=c||'var(--txt)';
+  t.style.opacity='1'; t.style.transform='translateX(-50%) translateY(0)';
+  clearTimeout(t._t);
+  t._t=setTimeout(()=>{t.style.opacity='0';t.style.transform='translateX(-50%) translateY(20px)';},3000);
+}
+function plog(m){document.getElementById('pc-log').textContent='> '+m;}
+function genCode(){
+  const c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  return Array.from({length:6},()=>c[Math.floor(Math.random()*c.length)]).join('');
+}
+
+/* ─── PHONE ─── */
+function initPhone(){
+  role='phone'; sv('v-phone');
+  const code=genCode();
+  document.getElementById('ph-code').textContent=code;
+  document.getElementById('ph-status').textContent='建立連線點...';
+
+  peer=new Peer('rl-'+code,{debug:0});
+  peer.on('open',()=>{
+    document.getElementById('ph-status').textContent='等待電腦連線...';
+    document.getElementById('sh-btn').disabled=false;
+  });
+  peer.on('error',e=>{
+    if(e.type==='unavailable-id'){peer.destroy();initPhone();return;}
+    document.getElementById('ph-err').textContent='錯誤: '+e.type;
+  });
+  peer.on('connection',c=>{
+    dconn=c;
+    c.on('open',()=>{
+      document.getElementById('ph-dot').className='dot ok';
+      document.getElementById('ph-status').textContent='電腦已連線！';
+      document.getElementById('ph-hud').style.display='flex';
+      toast('電腦已連線','var(--grn)');
+    });
+    c.on('data',handleCmd);
+    c.on('close',phDisc);
+  });
+  peer.on('call',call=>{
+    mcall=call;
+    call.answer(scStream||new MediaStream());
+    call.on('close',phDisc);
+  });
+}
+
+async function reqScreen(){
+  const btn=document.getElementById('sh-btn');
+  btn.disabled=true; btn.textContent='請求中...';
+  try{
+    scStream=await navigator.mediaDevices.getDisplayMedia({
+      video:{frameRate:{ideal:30},width:{ideal:1280}},audio:false
+    });
+    btn.textContent='✅ 分享中';
+    document.getElementById('ph-status').textContent='螢幕分享中，等待電腦連線...';
+    toast('螢幕分享成功！讓電腦輸入配對碼','var(--grn)');
+    scStream.getVideoTracks()[0].onended=()=>{
+      toast('螢幕分享已停止','var(--red)');
+      btn.textContent='📲 重新分享'; btn.disabled=false; scStream=null;
+    };
+    if(mcall&&mcall.peerConnection){
+      const s=mcall.peerConnection.getSenders().find(s=>s.track?.kind==='video');
+      if(s)s.replaceTrack(scStream.getVideoTracks()[0]);
+    }
+  }catch(err){
+    btn.disabled=false; btn.textContent='📲 開始分享螢幕';
+    const msgs={NotAllowedError:'請允許螢幕分享權限',NotSupportedError:'瀏覽器不支援（請用 Android Chrome）'};
+    document.getElementById('ph-err').textContent=msgs[err.name]||'失敗: '+err.message;
+  }
+}
+
+function handleCmd(d){
+  if(!d||!d.type)return;
+  const cur=document.getElementById('rcursor');
+  const ov=document.getElementById('ph-overlay');
+
+  if(d.type==='move'){
+    cur.style.display='block';
+    cur.style.left=(d.x*window.innerWidth)+'px';
+    cur.style.top=(d.y*window.innerHeight)+'px';
+    ov.style.display='block';
+    return;
+  }
+  if(d.type==='tap'){
+    const cx=d.x*window.innerWidth, cy=d.y*window.innerHeight;
+    cur.style.display='block';
+    cur.style.left=cx+'px'; cur.style.top=cy+'px';
+    const r=document.createElement('div');
+    r.className='ripple'; r.style.left=cx+'px'; r.style.top=cy+'px';
+    document.body.appendChild(r);
+    setTimeout(()=>r.remove(),600);
+    ov.style.pointerEvents='none';
+    const el=document.elementFromPoint(cx,cy);
+    ov.style.pointerEvents='';
+    if(el&&el!==ov&&el!==cur){
+      try{
+        el.dispatchEvent(new MouseEvent('mousedown',{bubbles:true,cancelable:true,clientX:cx,clientY:cy}));
+        el.dispatchEvent(new MouseEvent('mouseup',{bubbles:true,cancelable:true,clientX:cx,clientY:cy}));
+        el.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,clientX:cx,clientY:cy}));
+      }catch(e){}
+      try{
+        const t=new Touch({identifier:Date.now(),target:el,clientX:cx,clientY:cy,pageX:cx,pageY:cy,screenX:cx,screenY:cy});
+        el.dispatchEvent(new TouchEvent('touchstart',{bubbles:true,cancelable:true,touches:[t],targetTouches:[t],changedTouches:[t]}));
+        setTimeout(()=>{
+          el.dispatchEvent(new TouchEvent('touchend',{bubbles:true,cancelable:true,touches:[],targetTouches:[],changedTouches:[t]}));
+        },50);
+      }catch(e){}
+    }
+    if(navigator.vibrate)navigator.vibrate(30);
+    return;
+  }
+  if(d.type==='scroll'){
+    window.scrollBy({top:d.dy*250,behavior:'smooth'});
+    return;
+  }
+  if(d.type==='swipe'){
+    const cx=d.x*window.innerWidth, cy=d.y*window.innerHeight;
+    const ex=d.ex*window.innerWidth, ey=d.ey*window.innerHeight;
+    ov.style.pointerEvents='none';
+    const el=document.elementFromPoint(cx,cy)||document.body;
+    ov.style.pointerEvents='';
+    try{
+      const mk=(x,y)=>new Touch({identifier:1,target:el,clientX:x,clientY:y,pageX:x,pageY:y,screenX:x,screenY:y});
+      const ts=mk(cx,cy), te=mk(ex,ey);
+      el.dispatchEvent(new TouchEvent('touchstart',{bubbles:true,cancelable:true,touches:[ts],targetTouches:[ts],changedTouches:[ts]}));
+      setTimeout(()=>{
+        el.dispatchEvent(new TouchEvent('touchmove',{bubbles:true,cancelable:true,touches:[te],targetTouches:[te],changedTouches:[te]}));
+        setTimeout(()=>{
+          el.dispatchEvent(new TouchEvent('touchend',{bubbles:true,cancelable:true,touches:[],targetTouches:[],changedTouches:[te]}));
+        },100);
+      },100);
+    }catch(e){}
+    if(navigator.vibrate)navigator.vibrate([20,30,20]);
+    return;
+  }
+  if(d.type==='msg'){toast('💬 '+d.text);return;}
+  if(d.type==='vibrate'){
+    if(navigator.vibrate)navigator.vibrate([100,50,100,50,100]);
+    toast('📳 震動','var(--amb)');
+    return;
+  }
+  if(d.type==='key'){
+    document.dispatchEvent(new KeyboardEvent('keydown',{key:d.key,bubbles:true}));
+    return;
+  }
+}
+
+function phDisc(){
+  document.getElementById('ph-dot').className='dot wait';
+  document.getElementById('ph-status').textContent='電腦已斷線...';
+  document.getElementById('ph-hud').style.display='none';
+  document.getElementById('rcursor').style.display='none';
+  toast('電腦已斷線','var(--red)');
+  dconn=null; mcall=null;
+}
+
+/* ─── COMPUTER ─── */
+function showPCForm(){role='computer';sv('v-computer');}
+
+function pcConn(){
+  const code=document.getElementById('pc-cin').value.trim().toUpperCase();
+  if(code.length!==6){document.getElementById('pc-err').textContent='請輸入完整6位碼';return;}
+  document.getElementById('pc-err').textContent='';
+  peer=new Peer({debug:0});
+  peer.on('open',()=>{
+    dconn=peer.connect('rl-'+code,{reliable:true});
+    dconn.on('open',()=>{
+      plog('資料通道已連線');
+      toast('已連線','var(--grn)');
+      document.getElementById('pc-clabel').textContent='已連線 · CODE: '+code;
+      // Media call
+      const call=peer.call('rl-'+code,new MediaStream());
+      mcall=call;
+      call.on('stream',rs=>{
+        const v=document.getElementById('rvideo');
+        v.srcObject=rs; v.play().catch(()=>{});
+        v.style.display='block';
+        document.getElementById('nostream').style.display='none';
+        plog('影像串流已接收');
+        toast('已接收手機螢幕！','var(--grn)');
+      });
+      call.on('error',e=>plog('媒體錯誤: '+e));
+    });
+    dconn.on('close',()=>{toast('連線中斷','var(--red)');pcDisc();});
+    dconn.on('error',()=>{document.getElementById('pc-err').textContent='連線失敗，請確認配對碼';});
+    document.getElementById('pc-form').style.display='none';
+    document.getElementById('pc-viewer').style.display='flex';
+    setupVP();
+  });
+  peer.on('error',e=>{
+    const msg=e.type==='peer-unavailable'?'找不到手機，請確認配對碼':'錯誤: '+e.type;
+    document.getElementById('pc-err').textContent=msg;
+    peer.destroy();peer=null;
+  });
+}
+
+function setupVP(){
+  const vp=document.getElementById('vp');
+  const video=document.getElementById('rvideo');
+  const ci=document.getElementById('pci');
+
+  function relPos(e){
+    const r=video.getBoundingClientRect();
+    if(!r.width||!r.height)return null;
+    const cx=e.touches?e.touches[0].clientX:e.clientX;
+    const cy=e.touches?e.touches[0].clientY:e.clientY;
+    return{
+      x:Math.min(1,Math.max(0,(cx-r.left)/r.width)),
+      y:Math.min(1,Math.max(0,(cy-r.top)/r.height)),
+      px:cx,py:cy
+    };
+  }
+
+  vp.addEventListener('mousemove',e=>{
+    const p=relPos(e);
+    if(!p||!dconn)return;
+    const vr=vp.getBoundingClientRect();
+    const vvr=video.getBoundingClientRect();
+    ci.style.display='block';
+    ci.style.left=(e.clientX-vr.left)+'px';
+    ci.style.top=(e.clientY-vr.top)+'px';
+    dconn.send({type:'move',x:p.x,y:p.y});
+  });
+  vp.addEventListener('mouseleave',()=>{ci.style.display='none';});
+
+  let dn=false;
+  vp.addEventListener('pointerdown',e=>{e.preventDefault();dn=true;dnPos=relPos(e);});
+  vp.addEventListener('pointerup',e=>{
+    if(!dn)return; dn=false;
+    const up=relPos(e);
+    if(!up||!dconn)return;
+    const dx=up.x-(dnPos?.x||up.x), dy=up.y-(dnPos?.y||up.y);
+    const dist=Math.sqrt(dx*dx+dy*dy);
+    if(cmode==='click'||dist<0.02){
+      dconn.send({type:'tap',x:up.x,y:up.y});
+      plog('TAP ('+Math.round(up.x*100)+'%, '+Math.round(up.y*100)+'%)');
+    }else if(cmode==='swipe'&&dnPos){
+      dconn.send({type:'swipe',x:dnPos.x,y:dnPos.y,ex:up.x,ey:up.y});
+      plog('SWIPE');
+    }
+  });
+  vp.addEventListener('wheel',e=>{
+    e.preventDefault();
+    if(!dconn)return;
+    dconn.send({type:'scroll',dy:e.deltaY>0?1:-1});
+  },{passive:false});
+
+  document.addEventListener('keydown',e=>{
+    if(!dconn||e.target.tagName==='INPUT')return;
+    const keys=['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Enter','Escape',' ','Backspace'];
+    if(keys.includes(e.key)){
+      e.preventDefault();
+      dconn.send({type:'key',key:e.key});
+      plog('KEY: '+e.key);
+    }
+  });
+}
+
+function setMode(m){
+  cmode=m;
+  ['click','scroll','swipe'].forEach(x=>{
+    document.getElementById('b-'+x).classList.toggle('on',x===m);
+  });
+  document.getElementById('mbadge').textContent='MODE: '+m.toUpperCase();
+  const cursors={click:'crosshair',scroll:'ns-resize',swipe:'ew-resize'};
+  document.getElementById('vp').style.cursor=cursors[m];
+}
+
+function sndMsg(){
+  const inp=document.getElementById('pc-msg');
+  const t=inp.value.trim();
+  if(!t||!dconn)return;
+  dconn.send({type:'msg',text:t});
+  inp.value='';
+  plog('MSG: '+t);
+}
+
+function pcDisc(){
+  if(dconn)dconn.close();
+  if(mcall)mcall.close();
+  if(peer)peer.destroy();
+  dconn=null;mcall=null;peer=null;
+  document.getElementById('pc-form').style.display='flex';
+  document.getElementById('pc-viewer').style.display='none';
+  const v=document.getElementById('rvideo');
+  v.srcObject=null; v.style.display='none';
+  document.getElementById('nostream').style.display='flex';
+  document.getElementById('pc-cin').value='';
+}
+</script>
+</body>
+</html>
