@@ -9,166 +9,85 @@
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
   --bg:#080a0f;--bg2:#0d1017;--bg3:#141820;
-  --gold:#f5c542;--gold2:#e6b020;--gold3:rgba(245,197,66,.12);
+  --gold:#f5c542;--gold2:#e6b020;--gold3:rgba(245,197,66,.1);
   --border:rgba(255,255,255,.07);--border2:rgba(245,197,66,.25);
   --text:#e8eaf0;--muted:#5a6070;--green:#4ade80;--red:#f87171;
 }
 html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace}
-
-/* ── Noise overlay ── */
-body::before{
-  content:'';position:fixed;inset:0;
-  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
-  pointer-events:none;z-index:0;opacity:.5;
-}
-
-.wrap{position:relative;z-index:1;max-width:900px;margin:0 auto;padding:40px 20px 80px}
-
-/* ── Header ── */
-header{text-align:center;margin-bottom:48px}
-.logo{display:inline-flex;align-items:center;gap:10px;margin-bottom:20px}
+.wrap{max-width:900px;margin:0 auto;padding:40px 20px 80px}
+header{text-align:center;margin-bottom:44px}
+.logo{display:inline-flex;align-items:center;gap:10px;margin-bottom:18px}
 .logo svg{color:var(--gold)}
-.logo-text{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;letter-spacing:-.5px}
+.logo-text{font-family:'Syne',sans-serif;font-size:20px;font-weight:800}
 .logo-text span{color:var(--gold)}
-h1{font-family:'Syne',sans-serif;font-size:36px;font-weight:800;line-height:1.1;margin-bottom:10px}
+h1{font-family:'Syne',sans-serif;font-size:34px;font-weight:800;margin-bottom:10px}
 h1 em{font-style:normal;color:var(--gold)}
 .sub{color:var(--muted);font-size:13px;line-height:1.7}
 
-/* ── Cards ── */
-.card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:16px}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:14px}
 .card-title{font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:8px}
 .card-title::before{content:'';width:3px;height:12px;background:var(--gold);border-radius:2px}
-
 label{font-size:12px;color:var(--muted);display:block;margin-bottom:6px}
+textarea{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px;outline:none;padding:14px;min-height:220px;line-height:1.6;resize:vertical;transition:border .2s}
+textarea:focus{border-color:var(--border2)}
 
-textarea,input[type=number]{
-  width:100%;background:var(--bg3);border:1px solid var(--border);
-  border-radius:8px;color:var(--text);font-family:'JetBrains Mono',monospace;
-  font-size:12px;outline:none;transition:border .2s;resize:vertical;
-}
-textarea{padding:14px;min-height:200px;line-height:1.6}
-input[type=number]{padding:10px 14px;height:42px}
-textarea:focus,input:focus{border-color:var(--border2)}
-
-.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-
-/* ── Buttons ── */
-.btn{
-  width:100%;padding:14px;border:none;border-radius:10px;cursor:pointer;
-  font-family:'JetBrains Mono',monospace;font-weight:700;font-size:14px;
-  transition:all .2s;letter-spacing:.5px;
-}
-.btn-gold{
-  background:var(--gold);color:#0a0a0a;
-  box-shadow:0 0 0 0 rgba(245,197,66,0);
-}
+.btn{width:100%;padding:14px;border:none;border-radius:10px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:14px;transition:all .2s;letter-spacing:.5px}
+.btn-gold{background:var(--gold);color:#0a0a0a}
 .btn-gold:hover{background:var(--gold2);box-shadow:0 0 24px rgba(245,197,66,.25);transform:translateY(-1px)}
-.btn-gold:active{transform:translateY(0)}
 .btn-clear{background:var(--bg3);color:var(--muted);border:1px solid var(--border);margin-top:8px}
 .btn-clear:hover{color:var(--text);border-color:var(--border2)}
-.btn-copy{
-  background:var(--bg3);color:var(--gold);border:1px solid var(--border2);
-  padding:8px 16px;border-radius:7px;font-size:11px;font-weight:700;
-  font-family:'JetBrains Mono',monospace;cursor:pointer;transition:all .2s;
-}
+.btn-copy{background:var(--bg3);color:var(--gold);border:1px solid var(--border2);padding:8px 16px;border-radius:7px;font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;cursor:pointer;transition:all .2s}
 .btn-copy:hover{background:var(--gold3)}
 
-/* ── Status ── */
-.status{
-  padding:12px 16px;border-radius:8px;font-size:12px;margin-bottom:14px;
-  display:none;align-items:center;gap:8px;
-}
+.status{padding:12px 16px;border-radius:8px;font-size:12px;margin-bottom:14px;display:none;align-items:center;gap:8px}
 .status.ok{display:flex;background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.25);color:var(--green)}
 .status.err{display:flex;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.25);color:var(--red)}
 .status.info{display:flex;background:rgba(245,197,66,.08);border:1px solid var(--border2);color:var(--gold)}
 
-/* ── Extracted params ── */
-.params{
-  display:grid;grid-template-columns:repeat(4,1fr);gap:8px;
-  margin-bottom:14px;
-}
-.param-box{
-  background:var(--bg3);border:1px solid var(--border);border-radius:8px;
-  padding:10px 12px;text-align:center;
-}
-.param-box .label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
-.param-box .val{font-size:16px;font-weight:700;color:var(--gold)}
-.param-box .val.unknown{color:var(--muted);font-size:12px}
+.info-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.info-box{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 12px;text-align:center}
+.info-box .lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+.info-box .val{font-size:14px;font-weight:700;color:var(--gold)}
 
-/* ── Output ── */
 .out-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
-.out-box{
-  background:var(--bg3);border:1px solid var(--border);border-radius:10px;
-  padding:16px;font-size:12px;line-height:1.8;white-space:pre-wrap;
-  word-break:break-all;max-height:400px;overflow-y:auto;color:var(--text);
-  font-family:'JetBrains Mono',monospace;
-}
-.out-box:empty::before{content:'結果將顯示在這裡';color:var(--muted)}
-
-/* ── Scrollbar ── */
-::-webkit-scrollbar{width:6px;height:6px}
-::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:3px}
-::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.2)}
-
-/* ── Footer ── */
+.out-box{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:16px;font-size:12px;line-height:1.8;white-space:pre-wrap;word-break:break-all;max-height:420px;overflow-y:auto;color:var(--text)}
+.out-box:empty::before{content:'解碼結果將顯示在這裡';color:var(--muted)}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:3px}
 footer{text-align:center;color:var(--muted);font-size:11px;margin-top:40px;padding-top:24px;border-top:1px solid var(--border)}
-
-@media(max-width:600px){
-  h1{font-size:26px}
-  .row2,.params{grid-template-columns:1fr 1fr}
-}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
     <div class="logo">
-      <svg width="24" height="24" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8">
-        <path d="M10 2L3 6v4c0 4 3.5 7.5 7 8 3.5-.5 7-4 7-8V6L10 2z"/>
-      </svg>
+      <svg width="22" height="22" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 2L3 6v4c0 4 3.5 7.5 7 8 3.5-.5 7-4 7-8V6L10 2z"/></svg>
       <span class="logo-text">Lua<span>Shield</span></span>
     </div>
     <h1>Self <em>Deobfuscator</em></h1>
-    <p class="sub">只能解你自己的 LuaShield 混淆腳本<br>需要正確的 PlaceId 才能解碼</p>
+    <p class="sub">自動解碼你自己的 LuaShield 混淆腳本<br>支援 base-85 格式（lua_vm.txt 版本）</p>
   </header>
 
-  <!-- Input -->
   <div class="card">
     <div class="card-title">混淆後的腳本</div>
-    <label>把混淆輸出貼在這裡</label>
-    <textarea id="inputCode" placeholder="--[[ Protect by LuaShield ]]&#10;return(function() local ... end)()"></textarea>
+    <label>把混淆輸出全部貼在這裡</label>
+    <textarea id="inputCode" placeholder="--[[ Protect by LuaShield ]]&#10;return(function()...end)()"></textarea>
   </div>
 
-  <div class="card">
-    <div class="card-title">解碼設定</div>
-    <div class="row2">
-      <div>
-        <label>Place ID</label>
-        <input type="number" id="placeId" placeholder="你的遊戲 PlaceId" min="1">
-      </div>
-      <div style="display:flex;flex-direction:column;justify-content:flex-end">
-        <button class="btn btn-gold" onclick="deobfuscate()">⚡ 開始解碼</button>
-      </div>
-    </div>
+  <div class="card" style="padding:18px 24px">
+    <button class="btn btn-gold" onclick="deobfuscate()">⚡ 自動解碼</button>
   </div>
 
-  <!-- Extracted params display -->
-  <div class="card" id="paramsCard" style="display:none">
-    <div class="card-title">自動提取的參數</div>
-    <div class="params">
-      <div class="param-box"><div class="label">K1</div><div class="val" id="pK1">—</div></div>
-      <div class="param-box"><div class="label">M1</div><div class="val" id="pM1">—</div></div>
-      <div class="param-box"><div class="label">K2</div><div class="val" id="pK2">—</div></div>
-      <div class="param-box"><div class="label">M2</div><div class="val" id="pM2">—</div></div>
-    </div>
-    <div id="dataInfo" style="font-size:11px;color:var(--muted)"></div>
-  </div>
-
-  <!-- Status -->
   <div class="status" id="status"></div>
 
-  <!-- Output -->
+  <div class="card" id="infoCard" style="display:none">
+    <div class="card-title">提取資訊</div>
+    <div class="info-grid">
+      <div class="info-box"><div class="lbl">格式</div><div class="val" id="iFormat">—</div></div>
+      <div class="info-box"><div class="lbl">Segments</div><div class="val" id="iSegs">—</div></div>
+      <div class="info-box"><div class="lbl">原始大小</div><div class="val" id="iSize">—</div></div>
+    </div>
+  </div>
+
   <div class="card" id="outputCard" style="display:none">
     <div class="out-header">
       <div class="card-title" style="margin:0">解碼結果</div>
@@ -182,161 +101,184 @@ footer{text-align:center;color:var(--muted);font-size:11px;margin-top:40px;paddi
 </div>
 
 <script>
-function bxor(a, b) {
-  // JavaScript bitwise XOR (works for 0-255)
-  return (a ^ b) & 0xFF;
-}
-
-function decode(data, K1, M1, K2, M2, placeId) {
-  const pidMod = placeId % 256;
-  // Opaque predicate: bxor(pidMod, pidMod) = 0 always
-  const noise = bxor(pidMod, pidMod); // always 0
-  const rk1 = (K1 + noise) % 256;    // = K1
-  const rk2 = (K2 + bxor(pidMod, pidMod)) % 256; // = K2
-
-  // Layer 2 decode
-  const A = [];
-  let k = rk2;
-  for (let i = 0; i < data.length; i++) {
-    A.push(bxor(data[i], k % 256));
-    k = (k * M2 + (i + 7)) % 256;
-  }
-
-  // Layer 1 decode
-  const B = [];
-  k = rk1;
-  for (let i = 0; i < A.length; i++) {
-    B.push(bxor(A[i], k % 256));
-    k = (k * M1 + (i + 3)) % 256;
-  }
-
-  return B.map(x => String.fromCharCode(x)).join('');
-}
-
-function extractParams(code) {
-  const primes = new Set([131,137,139,149,151,157,163,167,173,179,181,191,193,197,199,211]);
-  const lines = code.split('\n');
+// ── Base-85 decoder (reverse of the passVM encoder) ──────────
+function decodeBase85(encoded) {
+  // Step 1: replace "z" with "!!!!!" (base-85 zero shorthand)
+  let s = encoded.replace(/z/g, '!!!!!')
   
-  const keys = [], muls = [];
-  let dataLine = '';
+  // Step 2: decode groups of 5 chars → 4 bytes (little-endian)
+  const bytes = []
+  for (let i = 0; i + 4 < s.length; i += 5) {
+    const p = s.charCodeAt(i)   - 33
+    const b = s.charCodeAt(i+1) - 33
+    const d = s.charCodeAt(i+2) - 33
+    const t = s.charCodeAt(i+3) - 33
+    const u = s.charCodeAt(i+4) - 33
+    // Formula from VM: (i-33)+(t-33)*85+(d-33)*7225+(b-33)*614125+(p-33)*52200625
+    // But note: the VM uses (p,b,d,t,i) as the 5 bytes from string.byte(_,1,5)
+    // and then L=(i-33)+(t-33)*85+(d-33)*7225+(b-33)*614125+(p-33)*52200625
+    const L = u + t*85 + d*7225 + b*614125 + p*52200625
+    // string.pack("<I4", L) → 4 bytes little-endian
+    bytes.push(L & 0xFF)
+    bytes.push((L >> 8) & 0xFF)
+    bytes.push((L >> 16) & 0xFF)
+    bytes.push((L >> 24) & 0xFF)
+  }
+  return bytes
+}
+
+// ── Extract long-string segments from Lua code ────────────────
+function extractSegments(code) {
+  // Find all Lua long strings: [=*[...]=*]
+  const segs = []
+  const re = /\[={0,10}\[([\s\S]*?)\]={0,10}\]/g
+  let m
+  while ((m = re.exec(code)) !== null) {
+    segs.push(m[1])
+  }
+  return segs
+}
+
+// ── Main deobfuscate ──────────────────────────────────────────
+function deobfuscate() {
+  const code = document.getElementById('inputCode').value.trim()
+  if (!code) { showStatus('❌ 請貼上混淆後的腳本', 'err'); return }
+  
+  showStatus('⏳ 分析中...', 'info')
+  
+  try {
+    // Detect format
+    const isBase85 = code.includes('52200625') || 
+                     code.includes('614125') || 
+                     code.includes('string.pack') ||
+                     (code.includes('[=') && code.includes(']='))
+    
+    const isXOR = code.includes('PlaceId%256') && 
+                  !code.includes('52200625')
+    
+    if (isXOR) {
+      decodeXOR(code)
+      return
+    }
+    
+    if (!isBase85) {
+      showStatus('❌ 無法識別格式，請確認是 LuaShield 混淆的腳本', 'err')
+      return
+    }
+    
+    // Base-85 format
+    const segs = extractSegments(code)
+    if (!segs.length) {
+      showStatus('❌ 找不到加密段落，腳本格式可能不完整', 'err')
+      return
+    }
+    
+    // Concatenate all segments
+    let combined = segs.join('')
+    
+    // Strip first 7 chars (SIG = 6 chars + separator)
+    combined = combined.substring(7)
+    
+    // Decode base-85
+    const bytes = decodeBase85(combined)
+    
+    // Convert to string, trim null bytes at end
+    let result = ''
+    for (let i = 0; i < bytes.length; i++) {
+      if (bytes[i] === 0 && i > bytes.length - 10) break
+      result += String.fromCharCode(bytes[i])
+    }
+    result = result.replace(/\0+$/, '').trim()
+    
+    if (!result || result.length < 2) {
+      showStatus('❌ 解碼失敗，腳本可能已損壞', 'err')
+      return
+    }
+    
+    // Show info
+    document.getElementById('infoCard').style.display = 'block'
+    document.getElementById('iFormat').textContent = 'Base-85'
+    document.getElementById('iSegs').textContent = segs.length
+    document.getElementById('iSize').textContent = result.length + ' chars'
+    
+    // Show result
+    document.getElementById('outputCard').style.display = 'block'
+    document.getElementById('output').textContent = result
+    
+    const looksLikeLua = /^[\s\S]*?(local|print|--|\w+\s*=|if |for |function |game\.)/.test(result.substring(0, 200))
+    if (looksLikeLua) {
+      showStatus('✅ 解碼成功！', 'ok')
+    } else {
+      showStatus('⚠️ 解碼完成，但結果可能不完整', 'info')
+    }
+    
+  } catch(e) {
+    showStatus('❌ 錯誤: ' + e.message, 'err')
+    console.error(e)
+  }
+}
+
+// ── XOR format decoder (newer passVM) ────────────────────────
+function decodeXOR(code) {
+  const primes = new Set([131,137,139,149,151,157,163,167,173,179,181,191,193,197,199,211])
+  const lines = code.split('\n')
+  const keys = [], muls = []
+  let dataLine = ''
 
   for (const line of lines) {
-    const trimmed = line.trim();
-    
-    // Key pattern: local _LSxxxx=(NUMBER+anything)%256
-    const km = trimmed.match(/^local\s+\S+=\((\d+)\+/);
-    if (km && trimmed.endsWith('%256')) {
-      keys.push(parseInt(km[1]));
-      continue;
-    }
-    
-    // Multiplier pattern: local _LSxxxx=NUMBER (just a plain prime number)
-    const mm = trimmed.match(/^local\s+\S+=(\d+)$/);
-    if (mm && primes.has(parseInt(mm[1]))) {
-      muls.push(parseInt(mm[1]));
-      continue;
-    }
-    
-    // Data pattern: local _LSxxxx={lots,of,numbers}
-    if (trimmed.match(/^local\s+\S+=\{\d/) && trimmed.includes(',')) {
-      if (trimmed.length > dataLine.length) dataLine = trimmed;
-    }
+    const t = line.trim()
+    const km = t.match(/^local\s+\S+=\((\d+)\+/)
+    if (km && t.endsWith('%256')) { keys.push(parseInt(km[1])); continue }
+    const mm = t.match(/^local\s+\S+=(\d+)$/)
+    if (mm && primes.has(parseInt(mm[1]))) { muls.push(parseInt(mm[1])); continue }
+    if (t.match(/^local\s+\S+=\{\d/) && t.includes(',') && t.length > dataLine.length) dataLine = t
   }
-  
-  if (keys.length < 2 || muls.length < 2 || !dataLine) return null;
-  
-  const K1 = keys[0], K2 = keys[1];
-  const M1 = muls[0], M2 = muls[1];
-  const dataStr = dataLine.match(/\{([\d,\s]+)\}/)?.[1] || '';
-  const data = dataStr.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
-  
-  if (data.length < 5) return null;
-  return { K1, K2, M1, M2, data };
+
+  if (keys.length < 2 || muls.length < 2 || !dataLine) {
+    showStatus('❌ 無法提取 XOR 參數', 'err'); return
+  }
+
+  const K1=keys[0], K2=keys[1], M1=muls[0], M2=muls[1]
+  const dataStr = dataLine.match(/\{([\d,\s]+)\}/)?.[1] || ''
+  const data = dataStr.split(',').map(s=>parseInt(s.trim())).filter(n=>!isNaN(n))
+
+  const A=[]; let k=K2
+  for(let i=0;i<data.length;i++){A.push((data[i]^k)&0xFF);k=(k*M2+(i+7))%256}
+  const B=[]; k=K1
+  for(let i=0;i<A.length;i++){B.push((A[i]^k)&0xFF);k=(k*M1+(i+3))%256}
+  const result = B.map(x=>String.fromCharCode(x)).join('').trim()
+
+  document.getElementById('infoCard').style.display = 'block'
+  document.getElementById('iFormat').textContent = 'XOR'
+  document.getElementById('iSegs').textContent = `K1=${K1} M1=${M1}`
+  document.getElementById('iSize').textContent = result.length + ' chars'
+  document.getElementById('outputCard').style.display = 'block'
+  document.getElementById('output').textContent = result
+  showStatus('✅ 解碼成功！（XOR 格式）', 'ok')
 }
 
 function showStatus(msg, type) {
-  const el = document.getElementById('status');
-  el.textContent = msg;
-  el.className = 'status ' + type;
-}
-
-function deobfuscate() {
-  const code = document.getElementById('inputCode').value.trim();
-  const placeId = parseInt(document.getElementById('placeId').value);
-
-  if (!code) { showStatus('❌ 請貼上混淆後的腳本', 'err'); return; }
-  if (!placeId || placeId <= 0) { showStatus('❌ 請填入正確的 PlaceId', 'err'); return; }
-
-  showStatus('⏳ 分析中...', 'info');
-
-  try {
-    const params = extractParams(code);
-    if (!params) {
-      showStatus('❌ 無法自動提取參數，請確認是 LuaShield 混淆的腳本', 'err');
-      return;
-    }
-
-    const { K1, K2, M1, M2, data } = params;
-
-    // Show extracted params
-    document.getElementById('paramsCard').style.display = 'block';
-    document.getElementById('pK1').textContent = K1;
-    document.getElementById('pK2').textContent = K2;
-    document.getElementById('pM1').textContent = M1;
-    document.getElementById('pM2').textContent = M2;
-    document.getElementById('dataInfo').textContent = `Data: ${data.length} bytes`;
-
-    // Decode
-    const result = decode(data, K1, M1, K2, M2, placeId);
-
-    // Validate result (should be valid Lua — starts with letters/keywords)
-    const trimmed = result.trim();
-    if (!trimmed || trimmed.length < 3) {
-      showStatus('❌ 解碼失敗 — PlaceId 可能不正確', 'err');
-      return;
-    }
-
-    // Check for common Lua patterns
-    const looksLikeLua = /^(local|print|--|\w+\s*=|if |for |function |game\.)/.test(trimmed);
-    
-    document.getElementById('outputCard').style.display = 'block';
-    document.getElementById('output').textContent = result;
-
-    if (looksLikeLua) {
-      showStatus('✅ 解碼成功！', 'ok');
-    } else {
-      showStatus('⚠️ 解碼完成，但結果看起來不像 Lua — PlaceId 可能不正確', 'info');
-    }
-
-  } catch(e) {
-    showStatus('❌ 錯誤: ' + e.message, 'err');
-  }
+  const el = document.getElementById('status')
+  el.textContent = msg
+  el.className = 'status ' + type
 }
 
 function copyResult() {
-  const text = document.getElementById('output').textContent;
+  const text = document.getElementById('output').textContent
   navigator.clipboard.writeText(text).then(() => {
-    const btn = document.querySelector('.btn-copy');
-    btn.textContent = '✓ 已複製';
-    setTimeout(() => btn.textContent = '複製', 1500);
-  });
+    const btn = document.querySelector('.btn-copy')
+    btn.textContent = '✓ 已複製'
+    setTimeout(() => btn.textContent = '複製', 1500)
+  })
 }
 
 function clearAll() {
-  document.getElementById('inputCode').value = '';
-  document.getElementById('placeId').value = '';
-  document.getElementById('output').textContent = '';
-  document.getElementById('outputCard').style.display = 'none';
-  document.getElementById('paramsCard').style.display = 'none';
-  document.getElementById('status').className = 'status';
+  document.getElementById('inputCode').value = ''
+  document.getElementById('output').textContent = ''
+  document.getElementById('outputCard').style.display = 'none'
+  document.getElementById('infoCard').style.display = 'none'
+  document.getElementById('status').className = 'status'
 }
-
-// Enter key on PlaceId field
-document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('placeId').addEventListener('keydown', e => {
-    if (e.key === 'Enter') deobfuscate();
-  });
-});
 </script>
 </body>
 </html>
