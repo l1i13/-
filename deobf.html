@@ -129,12 +129,29 @@ function decodeBase85(encoded) {
 
 // ── Extract long-string segments from Lua code ────────────────
 function extractSegments(code) {
-  // Find all Lua long strings: [=*[...]=*]
+  // Properly extract Lua long strings by matching bracket level
+  // [===[content]===] — content can contain ] but not ]===]
   const segs = []
-  const re = /\[={0,10}\[([\s\S]*?)\]={0,10}\]/g
-  let m
-  while ((m = re.exec(code)) !== null) {
-    segs.push(m[1])
+  let i = 0
+  while (i < code.length) {
+    if (code[i] === '[') {
+      let j = i + 1
+      let eqCount = 0
+      while (j < code.length && code[j] === '=') { eqCount++; j++ }
+      if (j < code.length && code[j] === '[') {
+        // Found [=..=[ opener
+        const closePattern = ']' + '='.repeat(eqCount) + ']'
+        const contentStart = j + 1
+        const closeIdx = code.indexOf(closePattern, contentStart)
+        if (closeIdx !== -1 && closeIdx - contentStart > 10) {
+          // Only take segments that look like base-85 data (long enough)
+          segs.push(code.substring(contentStart, closeIdx))
+          i = closeIdx + closePattern.length
+          continue
+        }
+      }
+    }
+    i++
   }
   return segs
 }
@@ -182,13 +199,10 @@ function deobfuscate() {
     // Decode base-85
     const bytes = decodeBase85(combined)
     
-    // Convert to string, trim null bytes at end
-    let result = ''
-    for (let i = 0; i < bytes.length; i++) {
-      if (bytes[i] === 0 && i > bytes.length - 10) break
-      result += String.fromCharCode(bytes[i])
-    }
-    result = result.replace(/\0+$/, '').trim()
+    // Convert bytes to UTF-8 string (handles Chinese/multi-byte chars)
+    let trimEnd = bytes.length
+    while (trimEnd > 0 && bytes[trimEnd-1] === 0) trimEnd--
+    const result = new TextDecoder('utf-8').decode(new Uint8Array(bytes.slice(0, trimEnd))).trim()
     
     if (!result || result.length < 2) {
       showStatus('❌ 解碼失敗，腳本可能已損壞', 'err')
