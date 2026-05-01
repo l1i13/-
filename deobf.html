@@ -176,8 +176,8 @@ function deobfuscate() {
     // Concatenate all segments
     let combined = segs.join('')
     
-    // Strip first 7 chars (SIG = 6 chars + separator)
-    combined = combined.substring(7)
+    // Strip first 6 chars (SIG = 6 chars; Lua string.sub(str,7) = JS substring(6))
+    combined = combined.substring(6)
     
     // Decode base-85
     const bytes = decodeBase85(combined)
