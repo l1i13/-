@@ -129,31 +129,48 @@ function decodeBase85(encoded) {
 
 // ── Extract long-string segments from Lua code ────────────────
 function extractSegments(code) {
-  // Properly extract Lua long strings by matching bracket level
-  // [===[content]===] — content can contain ] but not ]===]
-  const segs = []
+  // Find all long string positions first
+  const positions = []
   let i = 0
   while (i < code.length) {
     if (code[i] === '[') {
-      let j = i + 1
-      let eqCount = 0
-      while (j < code.length && code[j] === '=') { eqCount++; j++ }
+      let j = i + 1, eq = 0
+      while (j < code.length && code[j] === '=') { eq++; j++ }
       if (j < code.length && code[j] === '[') {
-        // Found [=..=[ opener
-        const closePattern = ']' + '='.repeat(eqCount) + ']'
-        const contentStart = j + 1
-        const closeIdx = code.indexOf(closePattern, contentStart)
-        if (closeIdx !== -1 && closeIdx - contentStart > 10) {
-          // Only take segments that look like base-85 data (long enough)
-          segs.push(code.substring(contentStart, closeIdx))
-          i = closeIdx + closePattern.length
+        const close = ']' + '='.repeat(eq) + ']'
+        const end = code.indexOf(close, j + 1)
+        if (end !== -1) {
+          positions.push({ start: i, contentStart: j + 1, end, closeLen: close.length })
+          i = end + close.length
           continue
         }
       }
     }
     i++
   }
-  return segs
+  
+  // Find group of exactly 5 consecutive long strings connected by ".."
+  // These are the base-85 payload segments (not junk/dead code)
+  for (let k = 0; k <= positions.length - 5; k++) {
+    const group = [positions[k]]
+    let ok = true
+    for (let m = 1; m < 5; m++) {
+      const prev = group[m - 1]
+      const prevEnd = prev.end + prev.closeLen
+      const between = code.substring(prevEnd, positions[k + m].start).trim()
+      if (between === '..') {
+        group.push(positions[k + m])
+      } else { ok = false; break }
+    }
+    if (ok && group.length === 5) {
+      // Verify it follows a local assignment
+      const before = code.substring(Math.max(0, group[0].start - 40), group[0].start)
+      if (before.includes('local ') && before.includes('=')) {
+        return group.map(g => code.substring(g.contentStart, g.end))
+      }
+    }
+  }
+  return []
 }
 
 // ── Main deobfuscate ──────────────────────────────────────────
@@ -190,11 +207,8 @@ function deobfuscate() {
       return
     }
     
-    // Concatenate all segments
-    let combined = segs.join('')
-    
-    // Strip first 6 chars (SIG = 6 chars; Lua string.sub(str,7) = JS substring(6))
-    combined = combined.substring(6)
+    // Concatenate all 5 segments, strip SIG (6 chars)
+    const combined = segs.join('').substring(6)
     
     // Decode base-85
     const bytes = decodeBase85(combined)
