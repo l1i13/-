@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GIF 轉換器</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0a0a;
+  --card: #111;
+  --card2: #171717;
+  --border: #222;
+  --accent: #d4ff00;
+  --accent2: #ff3c00;
+  --text: #f0f0f0;
+  --muted: #666;
+  --r: 6px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Syne', sans-serif;
+  min-height: 100vh;
+  padding: 48px 20px 80px;
+}
+.container { max-width: 700px; margin: 0 auto; }
+
+/* Header */
+header { margin-bottom: 48px; }
+header h1 {
+  font-size: clamp(2.4rem, 6vw, 4rem);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+header h1 span { color: var(--accent); }
+header p {
+  margin-top: 10px;
+  color: var(--muted);
+  font-family: 'Space Mono', monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Drop Zone */
+.dropzone {
+  border: 1.5px dashed #333;
+  border-radius: var(--r);
+  padding: 64px 32px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  background: var(--card);
+  position: relative;
+  overflow: hidden;
+}
+.dropzone::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 80%, rgba(212,255,0,0.04) 0%, transparent 70%);
+  pointer-events: none;
+}
+.dropzone:hover, .dropzone.over {
+  border-color: var(--accent);
+  background: var(--card2);
+}
+.drop-icon { font-size: 2.8rem; margin-bottom: 16px; }
+.dropzone h3 { font-size: 1.2rem; font-weight: 600; margin-bottom: 6px; }
+.dropzone p {
+  color: var(--muted);
+  font-family: 'Space Mono', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+}
+input[type=file] { display: none; }
+
+/* Panel */
+.panel {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 28px;
+  margin-top: 16px;
+}
+.panel-title {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* File info bar */
+.file-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--card2);
+  border-radius: 4px;
+  padding: 12px 14px;
+  margin-bottom: 20px;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.75rem;
+}
+.file-bar .fname { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-bar .fsize { color: var(--muted); flex-shrink: 0; }
+.file-tag {
+  background: var(--accent);
+  color: #000;
+  font-weight: 700;
+  font-size: 0.62rem;
+  padding: 2px 7px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  letter-spacing: 0.08em;
+}
+.file-tag.vid { background: var(--accent2); color: #fff; }
+
+/* Grid settings */
+.settings-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.field label {
+  display: block;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 7px;
+}
+.field input, .field select {
+  width: 100%;
+  background: var(--card2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 9px 12px;
+  border-radius: 4px;
+  font-size: 0.88rem;
+  font-family: 'Space Mono', monospace;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.field input:focus, .field select:focus { border-color: var(--accent); }
+.field input[type=range] {
+  -webkit-appearance: none;
+  padding: 0;
+  height: 36px;
+  background: transparent;
+  cursor: pointer;
+}
+.field input[type=range]::-webkit-slider-track {
+  background: var(--border);
+  height: 3px;
+  border-radius: 2px;
+}
+.field input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  margin-top: -5.5px;
+}
+.field-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.field-row input { flex: 1; }
+.fps-num {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.85rem;
+  color: var(--accent);
+  width: 28px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* Preview */
+.preview-wrap {
+  margin-top: 20px;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: #000;
+}
+.preview-wrap img, .preview-wrap video {
+  display: block;
+  width: 100%;
+  max-height: 260px;
+  object-fit: contain;
+}
+
+/* Buttons */
+.btn-row { display: flex; gap: 10px; margin-top: 20px; }
+.btn {
+  flex: 1; padding: 13px; border: none;
+  border-radius: 4px; font-size: 0.92rem;
+  font-weight: 600; cursor: pointer;
+  font-family: 'Syne', sans-serif;
+  letter-spacing: 0.02em;
+  transition: transform 0.15s, opacity 0.15s;
+}
+.btn:active { transform: scale(0.98); }
+.btn-ghost {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+.btn-ghost:hover { border-color: #444; color: var(--text); }
+.btn-main {
+  background: var(--accent);
+  color: #000;
+  font-weight: 800;
+  font-family: 'Space Mono', monospace;
+  letter-spacing: 0.05em;
+}
+.btn-main:hover { opacity: 0.9; }
+.btn-main:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+.btn-dl {
+  background: var(--accent2);
+  color: #fff;
+  font-weight: 800;
+  font-family: 'Space Mono', monospace;
+  letter-spacing: 0.05em;
+  text-decoration: none;
+  display: flex; align-items: center; justify-content: center;
+}
+.btn-dl:hover { opacity: 0.9; }
+
+/* Progress */
+.progress-panel {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 28px;
+  margin-top: 16px;
+  text-align: center;
+}
+.progress-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  margin-bottom: 16px;
+  min-height: 1.2em;
+}
+.progress-track {
+  height: 3px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+.progress-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+  width: 0%;
+  transition: width 0.3s;
+}
+.progress-pct {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: var(--accent);
+  font-family: 'Space Mono', monospace;
+}
+
+/* Output */
+.output-panel {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 28px;
+  margin-top: 16px;
+}
+.output-panel img {
+  display: block;
+  width: 100%;
+  max-height: 400px;
+  object-fit: contain;
+  border-radius: 4px;
+  background: #000;
+  margin-bottom: 16px;
+}
+.meta-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.meta-chip {
+  background: var(--card2);
+  border: 1px solid var(--border);
+  padding: 4px 10px;
+  border-radius: 3px;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.meta-chip span { color: var(--text); }
+
+/* Mode toggle */
+.mode-toggle {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.mode-btn {
+  flex: 1;
+  padding: 10px;
+  background: var(--card2);
+  border: 1.5px solid var(--border);
+  border-radius: 4px;
+  color: var(--muted);
+  font-family: 'Space Mono', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.mode-btn:hover { border-color: #444; color: var(--text); }
+.mode-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #000;
+  font-weight: 700;
+}
+.mode-btn.active.spin {
+  background: var(--accent2);
+  border-color: var(--accent2);
+  color: #fff;
+}
+
+/* Color picker row */
+.color-options {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+.color-swatch {
+  width: 32px; height: 32px;
+  border-radius: 4px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.color-swatch.active { border-color: var(--accent); }
+
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <h1>GIF<br><span>轉換器</span></h1>
+    <p>圖片 + 影片 → 動態 GIF &nbsp;/&nbsp; 全程在瀏覽器本地處理</p>
+  </header>
+
+  <!-- Drop zone -->
+  <div class="dropzone" id="dropzone">
+    <div class="drop-icon">📁</div>
+    <h3>拖放檔案到這裡</h3>
+    <p>支援 JPG / PNG / WebP / GIF &nbsp;·&nbsp; MP4 / WebM / MOV</p>
+    <input type="file" id="fileInput" accept="image/*,video/*">
+  </div>
+
+  <!-- Settings -->
+  <div class="panel hidden" id="settingsPanel">
+    <div class="panel-title">轉換設定</div>
+
+    <div class="file-bar" id="fileBar">
+      <span class="file-tag" id="fileTag">IMG</span>
+      <span class="fname" id="fileName">—</span>
+      <span class="fsize" id="fileSize">—</span>
+    </div>
+
+    <!-- Mode toggle (image only) -->
+    <div class="mode-toggle hidden" id="modeToggle">
+      <button class="mode-btn active" id="modeStatic" onclick="setMode('static')">📷 靜態 GIF</button>
+      <button class="mode-btn spin" id="modeSpin" onclick="setMode('spin')">🔄 旋轉 GIF</button>
+    </div>
+
+    <div class="settings-grid">
+      <div class="field">
+        <label>輸出寬度 (px)</label>
+        <input type="number" id="gifWidth" value="480" min="100" max="1200" step="10">
+      </div>
+      <div class="field">
+        <label>顏色品質</label>
+        <select id="numColors">
+          <option value="64">省空間（64 色）</option>
+          <option value="128">普通（128 色）</option>
+          <option value="256" selected>高品質（256 色）</option>
+        </select>
+      </div>
+      <!-- Video-only fields -->
+      <div class="field" id="fpsField">
+        <label>每秒幀數 (FPS)</label>
+        <div class="field-row">
+          <input type="range" id="fps" min="1" max="20" value="10">
+          <span class="fps-num" id="fpsNum">10</span>
+        </div>
+      </div>
+      <div class="field" id="durField">
+        <label>最長時間 (秒)</label>
+        <input type="number" id="maxDur" value="10" min="1" max="60" step="1">
+      </div>
+      <!-- Spin-only fields -->
+      <div class="field hidden" id="spinFpsField">
+        <label>旋轉速度 (FPS)</label>
+        <div class="field-row">
+          <input type="range" id="spinFps" min="4" max="30" value="16">
+          <span class="fps-num" id="spinFpsNum">16</span>
+        </div>
+      </div>
+      <div class="field hidden" id="spinDirField">
+        <label>旋轉方向</label>
+        <select id="spinDir">
+          <option value="cw">順時針 ↻</option>
+          <option value="ccw">逆時針 ↺</option>
+        </select>
+      </div>
+      <div class="field hidden" id="spinBgField">
+        <label>背景顏色</label>
+        <div class="color-options">
+          <div class="color-swatch active" id="bg-black" style="background:#000" onclick="setBg('black',this)" title="黑"></div>
+          <div class="color-swatch" id="bg-white" style="background:#fff" onclick="setBg('white',this)" title="白"></div>
+          <div class="color-swatch" id="bg-gray" style="background:#888" onclick="setBg('gray',this)" title="灰"></div>
+          <div class="color-swatch" id="bg-red" style="background:#e63" onclick="setBg('red',this)" title="橘紅"></div>
+          <div class="color-swatch" id="bg-blue" style="background:#36f" onclick="setBg('blue',this)" title="藍"></div>
+          <div class="color-swatch" id="bg-custom" style="background:linear-gradient(135deg,#f0f,#0ff)" title="自訂" onclick="document.getElementById('bgPicker').click()" title="自訂"></div>
+          <input type="color" id="bgPicker" style="display:none" value="#ff00aa" onchange="setBgCustom(this.value)">
+        </div>
+      </div>
+    </div>
+
+    <div class="preview-wrap" id="previewWrap"></div>
+
+    <div class="btn-row">
+      <button class="btn btn-ghost" id="resetBtn">← 重新選擇</button>
+      <button class="btn btn-main" id="convertBtn">開始轉換 →</button>
+    </div>
+  </div>
+
+  <!-- Progress -->
+  <div class="progress-panel hidden" id="progressPanel">
+    <div class="progress-label" id="progressLabel">準備中...</div>
+    <div class="progress-track">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+    <div class="progress-pct" id="progressPct">0%</div>
+  </div>
+
+  <!-- Output -->
+  <div class="output-panel hidden" id="outputPanel">
+    <div class="panel-title">輸出結果</div>
+    <img id="gifResult" src="" alt="GIF">
+    <div class="meta-row" id="metaRow"></div>
+    <div class="btn-row">
+      <button class="btn btn-ghost" id="resetBtn2">重新轉換</button>
+      <a class="btn btn-dl" id="downloadBtn" download="output.gif">⬇ 下載 GIF</a>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+// COLOR QUANTIZATION — MEDIAN CUT
+// ─────────────────────────────────────────────
+function quantize(imgData, n) {
+  const px = [];
+  for (let i = 0; i < imgData.length; i += 4)
+    px.push([imgData[i], imgData[i+1], imgData[i+2]]);
+
+  const step = Math.max(1, (px.length / 6000) | 0);
+  const s = px.filter((_, i) => i % step === 0);
+
+  const mkBox = cols => {
+    let r0=255,r1=0,g0=255,g1=0,b0=255,b1=0;
+    for (const [r,g,b] of cols) {
+      if(r<r0)r0=r; if(r>r1)r1=r;
+      if(g<g0)g0=g; if(g>g1)g1=g;
+      if(b<b0)b0=b; if(b>b1)b1=b;
+    }
+    return {cols, rR:r1-r0, gR:g1-g0, bR:b1-b0};
+  };
+
+  const split = bx => {
+    const ch = bx.rR>=bx.gR&&bx.rR>=bx.bR ? 0 : bx.gR>=bx.bR ? 1 : 2;
+    const so = [...bx.cols].sort((a,b)=>a[ch]-b[ch]);
+    const m = so.length>>1;
+    return [mkBox(so.slice(0,m)), mkBox(so.slice(m))];
+  };
+
+  let boxes = [mkBox(s)];
+  while (boxes.length < n) {
+    let mx=0, mi=0;
+    for (let i=0;i<boxes.length;i++) {
+      const v=Math.max(boxes[i].rR,boxes[i].gR,boxes[i].bR);
+      if(v>mx){mx=v;mi=i;}
+    }
+    if (mx===0||boxes[mi].cols.length<2) break;
+    const [a,b]=split(boxes[mi]);
+    boxes.splice(mi,1,a,b);
+  }
+
+  const pal = boxes.map(bx => {
+    const [rs,gs,bs]=bx.cols.reduce(([r,g,bb],[cr,cg,cb])=>[r+cr,g+cg,bb+cb],[0,0,0]);
+    const l=bx.cols.length;
+    return [rs/l|0, gs/l|0, bs/l|0];
+  });
+  while (pal.length<n) pal.push([0,0,0]);
+  return pal;
+}
+
+function mapIdx(imgData, pal) {
+  const idx = new Uint8Array(imgData.length>>2);
+  const cache = new Map();
+  for (let i=0,p=0; i<imgData.length; i+=4,p++) {
+    const r=imgData[i],g=imgData[i+1],b=imgData[i+2];
+    const k=(r<<16)|(g<<8)|b;
+    let v=cache.get(k);
+    if (v===undefined) {
+      let best=0,bd=Infinity;
+      for (let j=0;j<pal.length;j++) {
+        const dr=pal[j][0]-r,dg=pal[j][1]-g,db=pal[j][2]-b;
+        const d=dr*dr*3+dg*dg*6+db*db;
+        if(d<bd){bd=d;best=j;}
+      }
+      cache.set(k,best); v=best;
+    }
+    idx[p]=v;
+  }
+  return idx;
+}
+
+// ─────────────────────────────────────────────
+// LZW ENCODER
+// ─────────────────────────────────────────────
+function lzw(indices, minCS) {
+  const cc=1<<minCS, eof=cc+1;
+  const bytes=[];
+  let buf=0,bits=0,cs=minCS+1,nc=eof+1,mc=1<<cs;
+  const tbl=new Map();
+
+  const wr=code=>{
+    buf|=code<<bits; bits+=cs;
+    while(bits>=8){bytes.push(buf&0xFF);buf>>=8;bits-=8;}
+  };
+  const rst=()=>{tbl.clear();cs=minCS+1;nc=eof+1;mc=1<<cs;};
+
+  rst(); wr(cc);
+  let pre=-1;
+  for (let i=0;i<indices.length;i++) {
+    const k=indices[i];
+    if (pre<0){pre=k;continue;}
+    const key=(pre<<8)|k;
+    if (tbl.has(key)) { pre=tbl.get(key); }
+    else {
+      wr(pre);
+      if(nc<=4095){tbl.set(key,nc++);if(nc>mc&&cs<12){cs++;mc<<=1;}}
+      else{wr(cc);rst();}
+      pre=k;
+    }
+  }
+  if(pre>=0)wr(pre);
+  wr(eof);
+  if(bits>0)bytes.push(buf&0xFF);
+  return bytes;
+}
+
+// ─────────────────────────────────────────────
+// GIF WRITER
+// ─────────────────────────────────────────────
+function buildGIF(frames, w, h, delayMs, nc) {
+  let n=2; while(n<nc)n<<=1;
+  nc=Math.min(n,256);
+  const sf=Math.log2(nc)-1;
+  const mcs=Math.max(2,Math.log2(nc));
+  const dcs=Math.max(2,(delayMs/10)|0);
+  const buf=[];
+  const B=v=>buf.push(v&0xFF);
+  const W=v=>{B(v);B(v>>8);};
+  const S=s=>{for(const c of s)B(c.charCodeAt(0));};
+
+  S('GIF89a'); W(w); W(h); B(0x80|(7<<4)|sf); B(0); B(0);
+
+  // Global CT from frame 0
+  const gct=frames[0].pal;
+  for(let i=0;i<nc;i++){const c=gct[i]||[0,0,0];B(c[0]);B(c[1]);B(c[2]);}
+
+  // Netscape loop
+  B(0x21);B(0xFF);B(0x0B);S('NETSCAPE2.0');B(3);B(1);W(0);B(0);
+
+  for(const {pal,idx} of frames){
+    B(0x21);B(0xF9);B(4);B(0);W(dcs);B(0);B(0);
+    B(0x2C);W(0);W(0);W(w);W(h);B(0x80|sf);
+    for(let i=0;i<nc;i++){const c=pal[i]||[0,0,0];B(c[0]);B(c[1]);B(c[2]);}
+    B(mcs);
+    const comp=lzw(idx,mcs);
+    let i=0;
+    while(i<comp.length){const l=Math.min(255,comp.length-i);B(l);for(let j=0;j<l;j++)B(comp[i++]);}
+    B(0);
+  }
+  B(0x3B);
+  return new Uint8Array(buf);
+}
+
+// ─────────────────────────────────────────────
+// FRAME HELPERS
+// ─────────────────────────────────────────────
+function frameFromCanvas(ctx, w, h, nc) {
+  const id = ctx.getImageData(0,0,w,h).data;
+  const pal = quantize(id, nc);
+  const idx = mapIdx(id, pal);
+  return {pal, idx};
+}
+
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+
+function seekVideo(v,t){
+  return new Promise(r=>{
+    const fn=()=>{v.removeEventListener('seeked',fn);r();};
+    v.addEventListener('seeked',fn);
+    v.currentTime=t;
+  });
+}
+
+function setProgress(pct, label) {
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressPct').textContent = pct + '%';
+  document.getElementById('progressLabel').textContent = label;
+}
+
+// ─────────────────────────────────────────────
+// SPIN MODE STATE
+// ─────────────────────────────────────────────
+let currentMode = 'static'; // 'static' | 'spin'
+let spinBg = '#000000';
+
+function setMode(m) {
+  currentMode = m;
+  document.getElementById('modeStatic').classList.toggle('active', m==='static');
+  document.getElementById('modeSpin').classList.toggle('active', m==='spin');
+  const spinOnly = ['spinFpsField','spinDirField','spinBgField'];
+  spinOnly.forEach(id => document.getElementById(id).classList.toggle('hidden', m!=='spin'));
+}
+
+function setBg(name, el) {
+  const map = {black:'#000000', white:'#ffffff', gray:'#888888', red:'#ee6633', blue:'#3366ff'};
+  spinBg = map[name];
+  document.querySelectorAll('.color-swatch').forEach(s=>s.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function setBgCustom(hex) {
+  spinBg = hex;
+  document.querySelectorAll('.color-swatch').forEach(s=>s.classList.remove('active'));
+  const c = document.getElementById('bg-custom');
+  c.style.background = hex;
+  c.classList.add('active');
+}
+
+// ─────────────────────────────────────────────
+// CONVERSION
+// ─────────────────────────────────────────────
+async function loadImg(file) {
+  const url = URL.createObjectURL(file);
+  const img = await new Promise((res,rej)=>{
+    const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=url;
+  });
+  URL.revokeObjectURL(url);
+  return img;
+}
+async function convertImage(file, tw, nc) {
+  setProgress(10, '讀取圖片...');
+  const img = await loadImg(file);
+  const w=Math.min(tw,img.naturalWidth);
+  const h=Math.round(img.naturalHeight*(w/img.naturalWidth));
+  const cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+  const ctx=cv.getContext('2d'); ctx.drawImage(img,0,0,w,h);
+  setProgress(50,'色彩量化...');
+  await sleep(10);
+  const frame = frameFromCanvas(ctx,w,h,nc);
+  setProgress(90,'生成 GIF...');
+  await sleep(10);
+  const gif = buildGIF([frame],w,h,100,nc);
+  return {gif,w,h,frames:1};
+}
+
+async function convertImageSpin(file, tw, nc, fps, dir, bg) {
+  setProgress(5, '讀取圖片...');
+  const img = await loadImg(file);
+  const iw=Math.min(tw,img.naturalWidth);
+  const ih=Math.round(img.naturalHeight*(iw/img.naturalWidth));
+
+  // Canvas big enough to hold rotated image without clipping
+  const diag = Math.ceil(Math.sqrt(iw*iw + ih*ih));
+  const cw = diag, ch = diag;
+
+  const cv=document.createElement('canvas'); cv.width=cw; cv.height=ch;
+  const ctx=cv.getContext('2d');
+
+  const total = 36; // 360° / 10° = 36 frames per revolution
+  const degPerFrame = 360 / total;
+  const frames = [];
+
+  for (let i=0; i<total; i++) {
+    const angle = (dir==='ccw' ? -1 : 1) * i * degPerFrame * Math.PI / 180;
+    ctx.clearRect(0,0,cw,ch);
+    ctx.fillStyle = bg;
+    ctx.fillRect(0,0,cw,ch);
+    ctx.save();
+    ctx.translate(cw/2, ch/2);
+    ctx.rotate(angle);
+    ctx.drawImage(img, -iw/2, -ih/2, iw, ih);
+    ctx.restore();
+    frames.push(frameFromCanvas(ctx, cw, ch, nc));
+    setProgress(Math.round((i+1)/total*92), `旋轉幀 ${i+1} / ${total}...`);
+    if (i%4===0) await sleep(0);
+  }
+
+  const delayMs = Math.round(1000/fps);
+  setProgress(97,'生成 GIF...');
+  await sleep(10);
+  const gif = buildGIF(frames, cw, ch, delayMs, nc);
+  return {gif, w:cw, h:ch, frames:total};
+}
+
+async function convertVideo(file, tw, fps, maxSec, nc) {
+  const url = URL.createObjectURL(file);
+  const vid = document.createElement('video');
+  vid.muted = true;
+  await new Promise(r=>{vid.onloadedmetadata=r; vid.src=url;});
+
+  const w=Math.min(tw,vid.videoWidth);
+  const h=Math.round(vid.videoHeight*(w/vid.videoWidth));
+  const dur=Math.min(vid.duration,maxSec);
+  const dt=1/fps;
+  const total=Math.min(Math.floor(dur*fps),200);
+  const delayMs=Math.round(1000/fps);
+
+  const cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+  const ctx=cv.getContext('2d');
+  const frames=[];
+
+  for(let i=0;i<total;i++){
+    await seekVideo(vid, i*dt);
+    ctx.drawImage(vid,0,0,w,h);
+    frames.push(frameFromCanvas(ctx,w,h,nc));
+    setProgress(Math.round((i+1)/total*95), `處理第 ${i+1} / ${total} 幀...`);
+    if(i%3===0) await sleep(0);
+  }
+
+  URL.revokeObjectURL(url);
+  setProgress(98,'生成 GIF...');
+  await sleep(10);
+  const gif = buildGIF(frames,w,h,delayMs,nc);
+  return {gif,w,h,frames:total};
+}
+
+// ─────────────────────────────────────────────
+// UI
+// ─────────────────────────────────────────────
+let currentFile = null, isVideo = false;
+
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+
+dropzone.addEventListener('click', ()=>fileInput.click());
+dropzone.addEventListener('dragover', e=>{e.preventDefault();dropzone.classList.add('over');});
+dropzone.addEventListener('dragleave', ()=>dropzone.classList.remove('over'));
+dropzone.addEventListener('drop', e=>{
+  e.preventDefault(); dropzone.classList.remove('over');
+  if(e.dataTransfer.files[0]) load(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', ()=>{if(fileInput.files[0])load(fileInput.files[0]);});
+
+document.getElementById('fps').addEventListener('input', function(){
+  document.getElementById('fpsNum').textContent = this.value;
+});
+document.getElementById('spinFps').addEventListener('input', function(){
+  document.getElementById('spinFpsNum').textContent = this.value;
+});
+
+function fmt(bytes){
+  if(bytes<1024*1024) return (bytes/1024).toFixed(1)+' KB';
+  return (bytes/1048576).toFixed(2)+' MB';
+}
+
+function load(file) {
+  currentFile = file;
+  isVideo = file.type.startsWith('video/');
+
+  // File bar
+  document.getElementById('fileName').textContent = file.name;
+  document.getElementById('fileSize').textContent = fmt(file.size);
+  const tag = document.getElementById('fileTag');
+  if(isVideo){tag.textContent='VIDEO';tag.className='file-tag vid';}
+  else{tag.textContent='IMAGE';tag.className='file-tag';}
+
+  // Show/hide fields
+  document.getElementById('fpsField').classList.toggle('hidden', !isVideo);
+  document.getElementById('durField').classList.toggle('hidden', !isVideo);
+  document.getElementById('modeToggle').classList.toggle('hidden', isVideo);
+  // Reset to static mode
+  if (!isVideo) setMode('static');
+
+  // Preview
+  const pw = document.getElementById('previewWrap');
+  const url = URL.createObjectURL(file);
+  if(isVideo){
+    pw.innerHTML=`<video src="${url}" controls></video>`;
+  } else {
+    pw.innerHTML=`<img src="${url}" alt="preview">`;
+  }
+
+  dropzone.classList.add('hidden');
+  document.getElementById('settingsPanel').classList.remove('hidden');
+  document.getElementById('progressPanel').classList.add('hidden');
+  document.getElementById('outputPanel').classList.add('hidden');
+}
+
+function reset(){
+  currentFile=null;
+  fileInput.value='';
+  dropzone.classList.remove('hidden');
+  document.getElementById('settingsPanel').classList.add('hidden');
+  document.getElementById('progressPanel').classList.add('hidden');
+  document.getElementById('outputPanel').classList.add('hidden');
+}
+
+document.getElementById('resetBtn').addEventListener('click', reset);
+document.getElementById('resetBtn2').addEventListener('click', reset);
+
+document.getElementById('convertBtn').addEventListener('click', async ()=>{
+  if(!currentFile) return;
+  const tw = parseInt(document.getElementById('gifWidth').value)||480;
+  const fps = parseInt(document.getElementById('fps').value)||10;
+  const maxSec = parseInt(document.getElementById('maxDur').value)||10;
+  const nc = parseInt(document.getElementById('numColors').value)||256;
+
+  document.getElementById('settingsPanel').classList.add('hidden');
+  document.getElementById('progressPanel').classList.remove('hidden');
+  document.getElementById('outputPanel').classList.add('hidden');
+  setProgress(0,'準備中...');
+
+  try {
+    let result;
+    if (isVideo) {
+      result = await convertVideo(currentFile, tw, fps, maxSec, nc);
+    } else if (currentMode === 'spin') {
+      const spinFps = parseInt(document.getElementById('spinFps').value)||16;
+      const dir = document.getElementById('spinDir').value;
+      result = await convertImageSpin(currentFile, tw, nc, spinFps, dir, spinBg);
+    } else {
+      result = await convertImage(currentFile, tw, nc);
+    }
+
+    setProgress(100,'完成！');
+
+    const blob = new Blob([result.gif],{type:'image/gif'});
+    const url = URL.createObjectURL(blob);
+
+    document.getElementById('gifResult').src = url;
+    document.getElementById('downloadBtn').href = url;
+    document.getElementById('downloadBtn').download = currentFile.name.replace(/\.[^.]+$/,'')+'.gif';
+
+    const meta = document.getElementById('metaRow');
+    meta.innerHTML = [
+      ['尺寸', `${result.w} × ${result.h} px`],
+      ['幀數', `${result.frames} 幀`],
+      ['顏色', `${nc} 色`],
+      ['大小', fmt(result.gif.byteLength)],
+    ].map(([k,v])=>`<div class="meta-chip">${k} <span>${v}</span></div>`).join('');
+
+    await sleep(400);
+    document.getElementById('progressPanel').classList.add('hidden');
+    document.getElementById('outputPanel').classList.remove('hidden');
+
+  } catch(e) {
+    alert('轉換失敗：'+e.message);
+    document.getElementById('progressPanel').classList.add('hidden');
+    document.getElementById('settingsPanel').classList.remove('hidden');
+  }
+});
+</script>
+</body>
+</html>
