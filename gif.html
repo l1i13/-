@@ -419,13 +419,6 @@ input[type=file] { display: none; }
         <input type="number" id="maxDur" value="10" min="1" max="60" step="1">
       </div>
       <!-- Spin-only fields -->
-      <div class="field hidden" id="spinFpsField">
-        <label>旋轉速度 (FPS)</label>
-        <div class="field-row">
-          <input type="range" id="spinFps" min="4" max="30" value="16">
-          <span class="fps-num" id="spinFpsNum">16</span>
-        </div>
-      </div>
       <div class="field hidden" id="spinDirField">
         <label>旋轉方向</label>
         <select id="spinDir">
@@ -441,7 +434,8 @@ input[type=file] { display: none; }
           <div class="color-swatch" id="bg-gray" style="background:#888" onclick="setBg('gray',this)" title="灰"></div>
           <div class="color-swatch" id="bg-red" style="background:#e63" onclick="setBg('red',this)" title="橘紅"></div>
           <div class="color-swatch" id="bg-blue" style="background:#36f" onclick="setBg('blue',this)" title="藍"></div>
-          <div class="color-swatch" id="bg-custom" style="background:linear-gradient(135deg,#f0f,#0ff)" title="自訂" onclick="document.getElementById('bgPicker').click()" title="自訂"></div>
+          <div class="color-swatch" id="bg-transparent" style="background:repeating-conic-gradient(#555 0% 25%,#222 0% 50%) 0/12px 12px" onclick="setBg('transparent',this)" title="透明"></div>
+          <div class="color-swatch" id="bg-custom" style="background:linear-gradient(135deg,#f0f,#0ff)" title="自訂" onclick="document.getElementById('bgPicker').click()"></div>
           <input type="color" id="bgPicker" style="display:none" value="#ff00aa" onchange="setBgCustom(this.value)">
         </div>
       </div>
@@ -527,16 +521,68 @@ function quantize(imgData, n) {
   return pal;
 }
 
-function mapIdx(imgData, pal) {
+function quantize(imgData, n, skipAlpha = false) {
+  const px = [];
+  for (let i = 0; i < imgData.length; i += 4) {
+    if (skipAlpha && imgData[i+3] < 128) continue;
+    px.push([imgData[i], imgData[i+1], imgData[i+2]]);
+  }
+  if (px.length === 0) return Array(n).fill([0,0,0]);
+
+  const step = Math.max(1, (px.length / 6000) | 0);
+  const s = px.filter((_, i) => i % step === 0);
+
+  const mkBox = cols => {
+    let r0=255,r1=0,g0=255,g1=0,b0=255,b1=0;
+    for (const [r,g,b] of cols) {
+      if(r<r0)r0=r; if(r>r1)r1=r;
+      if(g<g0)g0=g; if(g>g1)g1=g;
+      if(b<b0)b0=b; if(b>b1)b1=b;
+    }
+    return {cols, rR:r1-r0, gR:g1-g0, bR:b1-b0};
+  };
+
+  const split = bx => {
+    const ch = bx.rR>=bx.gR&&bx.rR>=bx.bR ? 0 : bx.gR>=bx.bR ? 1 : 2;
+    const so = [...bx.cols].sort((a,b)=>a[ch]-b[ch]);
+    const m = so.length>>1;
+    return [mkBox(so.slice(0,m)), mkBox(so.slice(m))];
+  };
+
+  let boxes = [mkBox(s)];
+  while (boxes.length < n) {
+    let mx=0, mi=0;
+    for (let i=0;i<boxes.length;i++) {
+      const v=Math.max(boxes[i].rR,boxes[i].gR,boxes[i].bR);
+      if(v>mx){mx=v;mi=i;}
+    }
+    if (mx===0||boxes[mi].cols.length<2) break;
+    const [a,b]=split(boxes[mi]);
+    boxes.splice(mi,1,a,b);
+  }
+
+  const pal = boxes.map(bx => {
+    const [rs,gs,bs]=bx.cols.reduce(([r,g,bb],[cr,cg,cb])=>[r+cr,g+cg,bb+cb],[0,0,0]);
+    const l=bx.cols.length;
+    return [rs/l|0, gs/l|0, bs/l|0];
+  });
+  while (pal.length<n) pal.push([0,0,0]);
+  return pal;
+}
+
+function mapIdx(imgData, pal, transpIdx = -1) {
   const idx = new Uint8Array(imgData.length>>2);
   const cache = new Map();
+  const startJ = transpIdx === 0 ? 1 : 0;
   for (let i=0,p=0; i<imgData.length; i+=4,p++) {
+    if (transpIdx >= 0 && imgData[i+3] < 128) { idx[p]=transpIdx; continue; }
     const r=imgData[i],g=imgData[i+1],b=imgData[i+2];
     const k=(r<<16)|(g<<8)|b;
     let v=cache.get(k);
     if (v===undefined) {
-      let best=0,bd=Infinity;
+      let best=startJ, bd=Infinity;
       for (let j=0;j<pal.length;j++) {
+        if (j===transpIdx) continue;
         const dr=pal[j][0]-r,dg=pal[j][1]-g,db=pal[j][2]-b;
         const d=dr*dr*3+dg*dg*6+db*db;
         if(d<bd){bd=d;best=j;}
@@ -597,6 +643,7 @@ function buildGIF(frames, w, h, delayMs, nc) {
   const W=v=>{B(v);B(v>>8);};
   const S=s=>{for(const c of s)B(c.charCodeAt(0));};
 
+  const hasTrans = frames.some(f => (f.transpIdx ?? -1) >= 0);
   S('GIF89a'); W(w); W(h); B(0x80|(7<<4)|sf); B(0); B(0);
 
   // Global CT from frame 0
@@ -606,8 +653,11 @@ function buildGIF(frames, w, h, delayMs, nc) {
   // Netscape loop
   B(0x21);B(0xFF);B(0x0B);S('NETSCAPE2.0');B(3);B(1);W(0);B(0);
 
-  for(const {pal,idx} of frames){
-    B(0x21);B(0xF9);B(4);B(0);W(dcs);B(0);B(0);
+  for(const {pal,idx,transpIdx} of frames){
+    const ti = (transpIdx ?? -1) >= 0 ? transpIdx : -1;
+    // disposal=2 (restore to bg) when transparent so each frame clears; else 0
+    const gcePacked = ti >= 0 ? 0x09 : 0x00; // 0x09 = disposal=2<<2 | transparent=1
+    B(0x21);B(0xF9);B(4);B(gcePacked);W(dcs);B(ti >= 0 ? ti : 0);B(0);
     B(0x2C);W(0);W(0);W(w);W(h);B(0x80|sf);
     for(let i=0;i<nc;i++){const c=pal[i]||[0,0,0];B(c[0]);B(c[1]);B(c[2]);}
     B(mcs);
@@ -623,11 +673,19 @@ function buildGIF(frames, w, h, delayMs, nc) {
 // ─────────────────────────────────────────────
 // FRAME HELPERS
 // ─────────────────────────────────────────────
-function frameFromCanvas(ctx, w, h, nc) {
+function frameFromCanvas(ctx, w, h, nc, useTransparent = false) {
   const id = ctx.getImageData(0,0,w,h).data;
+  if (useTransparent) {
+    const TIDX = 0;
+    const pal = quantize(id, nc - 1, true); // skip transparent pixels
+    pal.unshift([0, 0, 0]); // index 0 = transparent slot
+    while (pal.length < nc) pal.push([0,0,0]);
+    const idx = mapIdx(id, pal, TIDX);
+    return {pal, idx, transpIdx: TIDX};
+  }
   const pal = quantize(id, nc);
   const idx = mapIdx(id, pal);
-  return {pal, idx};
+  return {pal, idx, transpIdx: -1};
 }
 
 function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
@@ -656,12 +714,12 @@ function setMode(m) {
   currentMode = m;
   document.getElementById('modeStatic').classList.toggle('active', m==='static');
   document.getElementById('modeSpin').classList.toggle('active', m==='spin');
-  const spinOnly = ['spinFpsField','spinDirField','spinBgField'];
+  const spinOnly = ['spinDirField','spinBgField'];
   spinOnly.forEach(id => document.getElementById(id).classList.toggle('hidden', m!=='spin'));
 }
 
 function setBg(name, el) {
-  const map = {black:'#000000', white:'#ffffff', gray:'#888888', red:'#ee6633', blue:'#3366ff'};
+  const map = {black:'#000000', white:'#ffffff', gray:'#888888', red:'#ee6633', blue:'#3366ff', transparent:'transparent'};
   spinBg = map[name];
   document.querySelectorAll('.color-swatch').forEach(s=>s.classList.remove('active'));
   el.classList.add('active');
@@ -702,43 +760,44 @@ async function convertImage(file, tw, nc) {
   return {gif,w,h,frames:1};
 }
 
-async function convertImageSpin(file, tw, nc, fps, dir, bg) {
+async function convertImageSpin(file, tw, nc, dir, bg) {
   setProgress(5, '讀取圖片...');
   const img = await loadImg(file);
-  const iw=Math.min(tw,img.naturalWidth);
-  const ih=Math.round(img.naturalHeight*(iw/img.naturalWidth));
+  const iw = Math.min(tw, img.naturalWidth);
+  const ih = Math.round(img.naturalHeight * (iw / img.naturalWidth));
+  const cw = iw, ch = ih; // keep original size, corners clip during rotation
 
-  // Canvas big enough to hold rotated image without clipping
-  const diag = Math.ceil(Math.sqrt(iw*iw + ih*ih));
-  const cw = diag, ch = diag;
+  const cv = document.createElement('canvas'); cv.width=cw; cv.height=ch;
+  const ctx = cv.getContext('2d');
 
-  const cv=document.createElement('canvas'); cv.width=cw; cv.height=ch;
-  const ctx=cv.getContext('2d');
-
-  const total = 36; // 360° / 10° = 36 frames per revolution
-  const degPerFrame = 360 / total;
+  // 6 seconds per revolution, 36 frames → 36 × ~167ms
+  const TOTAL = 36;
+  const DELAY_MS = Math.round(6000 / TOTAL); // ≈167ms
+  const DEG = 360 / TOTAL;
+  const isTransparent = bg === 'transparent';
   const frames = [];
 
-  for (let i=0; i<total; i++) {
-    const angle = (dir==='ccw' ? -1 : 1) * i * degPerFrame * Math.PI / 180;
-    ctx.clearRect(0,0,cw,ch);
-    ctx.fillStyle = bg;
-    ctx.fillRect(0,0,cw,ch);
+  for (let i=0; i<TOTAL; i++) {
+    const angle = (dir==='ccw' ? -1 : 1) * i * DEG * Math.PI / 180;
+    ctx.clearRect(0, 0, cw, ch);
+    if (!isTransparent) {
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, cw, ch);
+    }
     ctx.save();
     ctx.translate(cw/2, ch/2);
     ctx.rotate(angle);
     ctx.drawImage(img, -iw/2, -ih/2, iw, ih);
     ctx.restore();
-    frames.push(frameFromCanvas(ctx, cw, ch, nc));
-    setProgress(Math.round((i+1)/total*92), `旋轉幀 ${i+1} / ${total}...`);
-    if (i%4===0) await sleep(0);
+    frames.push(frameFromCanvas(ctx, cw, ch, nc, isTransparent));
+    setProgress(Math.round((i+1)/TOTAL*92), `旋轉幀 ${i+1} / ${TOTAL}...`);
+    if (i % 4 === 0) await sleep(0);
   }
 
-  const delayMs = Math.round(1000/fps);
-  setProgress(97,'生成 GIF...');
+  setProgress(97, '生成 GIF...');
   await sleep(10);
-  const gif = buildGIF(frames, cw, ch, delayMs, nc);
-  return {gif, w:cw, h:ch, frames:total};
+  const gif = buildGIF(frames, cw, ch, DELAY_MS, nc);
+  return {gif, w: cw, h: ch, frames: TOTAL};
 }
 
 async function convertVideo(file, tw, fps, maxSec, nc) {
@@ -792,9 +851,6 @@ fileInput.addEventListener('change', ()=>{if(fileInput.files[0])load(fileInput.f
 
 document.getElementById('fps').addEventListener('input', function(){
   document.getElementById('fpsNum').textContent = this.value;
-});
-document.getElementById('spinFps').addEventListener('input', function(){
-  document.getElementById('spinFpsNum').textContent = this.value;
 });
 
 function fmt(bytes){
@@ -864,9 +920,8 @@ document.getElementById('convertBtn').addEventListener('click', async ()=>{
     if (isVideo) {
       result = await convertVideo(currentFile, tw, fps, maxSec, nc);
     } else if (currentMode === 'spin') {
-      const spinFps = parseInt(document.getElementById('spinFps').value)||16;
       const dir = document.getElementById('spinDir').value;
-      result = await convertImageSpin(currentFile, tw, nc, spinFps, dir, spinBg);
+      result = await convertImageSpin(currentFile, tw, nc, dir, spinBg);
     } else {
       result = await convertImage(currentFile, tw, nc);
     }
