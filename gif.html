@@ -770,10 +770,10 @@ async function convertImageSpin(file, tw, nc, dir, bg) {
   const cv = document.createElement('canvas'); cv.width=cw; cv.height=ch;
   const ctx = cv.getContext('2d');
 
-  // 6 seconds per revolution, 60 frames → 60 × 100ms
+  // 3 seconds per revolution, 60 frames → 60 × 50ms
   const TOTAL = 60;
-  const DELAY_MS = 100; // 100ms = 10fps, smooth enough for GIF
-  const DEG = 360 / TOTAL; // 6° per frame
+  const DELAY_MS = 50;
+  const DEG = 360 / TOTAL;
   const isTransparent = bg === 'transparent';
   const frames = [];
 
