@@ -1,326 +1,439 @@
-<!DOCTYPE html>
+const TURNSTILE_SECRET = '0x4AAAAAADZLSEuruuD_jx-WcTU29GcrPGY';
+const TURNSTILE_SITE_KEY = '0x4AAAAAADZLSJH0qvO_6ZBR';
+
+// Change these before publishing.
+const LOGIN_USER = 'admin';
+const LOGIN_PASSWORD = 'admin';
+
+const SECURITY_HEADERS = {
+  'X-Content-Type-Options': 'nosniff',
+  'Referrer-Policy': 'same-origin',
+  'Cache-Control': 'no-store',
+};
+
+const CHALLENGE_PAGE = `<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<title>解混淆測試器</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Heroine - Verifying</title>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 <style>
-  * { box-sizing: border-box; }
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; max-width: 1100px; margin: 20px auto; padding: 20px; background: #1a1a1a; color: #ddd; line-height: 1.5; }
-  h1 { color: #fff; margin: 0 0 8px; font-size: 24px; }
-  .sub { color: #888; margin: 0 0 20px; font-size: 13px; }
-  textarea { width: 100%; min-height: 200px; font-family: 'Consolas', 'Monaco', monospace; font-size: 11px; background: #0f0f0f; color: #ccc; border: 1px solid #333; border-radius: 4px; padding: 10px; }
-  textarea:focus { outline: none; border-color: #4a9; }
-  .controls { margin: 12px 0; display: flex; gap: 8px; align-items: center; }
-  button { padding: 9px 18px; font-size: 13px; background: #4a9; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: 500; }
-  button:hover { background: #5ba; }
-  button.secondary { background: #444; }
-  button.secondary:hover { background: #555; }
-  button:disabled { opacity: 0.5; cursor: not-allowed; }
-  #output { background: #0f0f0f; border: 1px solid #333; border-radius: 4px; padding: 15px; margin-top: 12px; min-height: 80px; font-family: 'Consolas', monospace; font-size: 12px; }
-  .meta { color: #888; font-size: 11px; margin: 4px 0; }
-  .capture { margin: 12px 0; padding: 10px; background: #1d2d1d; border-left: 4px solid #4a9; border-radius: 0 4px 4px 0; font-size: 11px; white-space: pre-wrap; word-break: break-all; max-height: 280px; overflow-y: auto; }
-  .capture.danger { background: #2d1717; border-left-color: #f55; }
-  .label { color: #4a9; font-weight: 600; margin-bottom: 6px; font-family: -apple-system, sans-serif; font-size: 12px; }
-  .danger .label { color: #f88; }
-  .verdict { padding: 14px; margin: 16px 0; border-radius: 4px; font-size: 14px; }
-  .verdict.ok { background: #1d3d20; border-left: 5px solid #4a9; color: #ace; }
-  .verdict.fail { background: #3d1d1d; border-left: 5px solid #f55; color: #fcc; }
-  .verdict.warn { background: #3d3520; border-left: 5px solid #fa4; color: #fde; }
-  .err { color: #f88; }
-  .badge { display: inline-block; padding: 2px 8px; border-radius: 3px; background: #444; color: #ccc; font-size: 10px; margin-left: 6px; font-weight: 600; }
-  .badge.warn { background: #a72; color: #fff; }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{min-height:100vh;background:#0d0d0d;display:flex;align-items:center;justify-content:center;font-family:Arial,sans-serif;color:#e8e8e8}
+  .card{background:#161616;border:1px solid #252525;border-radius:12px;padding:44px 36px;text-align:center;max-width:360px;width:calc(100% - 32px)}
+  .logo{font-size:22px;font-weight:700;color:#f5c542;margin-bottom:8px}
+  .sub{font-size:13px;color:#8a8a8a;margin-bottom:28px}
+  .cf-turnstile{display:flex;justify-content:center}
 </style>
 </head>
 <body>
-
-<h1>解混淆測試器</h1>
-<p class="sub">把混淆後的腳本貼進來、按按鈕——模擬 Threaded 風格的 deobfuscator (假造 Roblox 環境 + hook loadstring) 看會抓到什麼</p>
-
-<textarea id="input" placeholder="把混淆過的 Lua 腳本貼到這裡..."></textarea>
-
-<div class="controls">
-  <button id="run">解開看看</button>
-  <button id="clear" class="secondary">清空</button>
-  <span class="meta" id="status"></span>
+<div class="card">
+  <div class="logo">Heroine</div>
+  <div class="sub">Please complete verification to continue</div>
+  <div class="cf-turnstile" data-sitekey="${TURNSTILE_SITE_KEY}" data-callback="onVerified"></div>
 </div>
-
-<div id="output"></div>
-
-<script src="https://cdn.jsdelivr.net/npm/fengari-web@0.1.4/dist/fengari-web.js"></script>
 <script>
-const $ = id => document.getElementById(id);
-
-$('clear').onclick = () => { $('input').value=''; $('output').innerHTML=''; $('status').textContent=''; };
-
-$('run').onclick = () => {
-  const src = $('input').value.trim();
-  if (!src) { $('output').innerHTML = '<div class="err">請貼入腳本</div>'; return; }
-  
-  $('run').disabled = true;
-  $('status').textContent = '執行中... (大檔案可能要幾秒)';
-  $('output').innerHTML = '';
-  
-  setTimeout(() => {
-    const t0 = performance.now();
-    try {
-      const r = runSandbox(src);
-      r.ms = (performance.now() - t0) | 0;
-      render(r);
-    } catch (e) {
-      $('output').innerHTML = '<div class="err">JS error: ' + escapeHtml(e.message || String(e)) + '</div>';
-    }
-    $('run').disabled = false;
-    $('status').textContent = '';
-  }, 50);
-};
-
-function runSandbox(script) {
-  const { lua, lualib, lauxlib, to_luastring, to_jsstring } = fengari;
-  
-  const L = lauxlib.luaL_newstate();
-  lualib.luaL_openlibs(L);
-  
-  // Push user script as global (avoid string-embedding issues)
-  lua.lua_pushstring(L, to_luastring(script));
-  lua.lua_setglobal(L, to_luastring('_userScript'));
-  
-  // The harness: fake Roblox env, polyfills, loadstring hook
-  const harness = `
-    -- ── bit32 polyfill (fengari is Lua 5.3, bit32 removed) ──
-    if not bit32 then
-      bit32 = {}
-      function bit32.bxor(a, b)
-        a = a % 0x100000000; b = b % 0x100000000
-        local r, p = 0, 1
-        while a > 0 or b > 0 do
-          local ra, rb = a % 2, b % 2
-          if ra ~= rb then r = r + p end
-          a = math.floor(a / 2); b = math.floor(b / 2); p = p * 2
-        end
-        return r
-      end
-      function bit32.band(a, b)
-        local r, p = 0, 1
-        while a > 0 and b > 0 do
-          if a % 2 == 1 and b % 2 == 1 then r = r + p end
-          a = math.floor(a / 2); b = math.floor(b / 2); p = p * 2
-        end
-        return r
-      end
-      function bit32.bor(a, b)
-        local r, p = 0, 1
-        while a > 0 or b > 0 do
-          if a % 2 == 1 or b % 2 == 1 then r = r + p end
-          a = math.floor(a / 2); b = math.floor(b / 2); p = p * 2
-        end
-        return r
-      end
-      function bit32.rshift(a, n) return math.floor(a / (2 ^ n)) end
-      function bit32.lshift(a, n) return (a * (2 ^ n)) % 0x100000000 end
-    end
-    
-    if not string.split then
-      function string.split(s, sep)
-        local r = {}
-        local esc = sep:gsub("([%(%)%.%%%+%-%*%?%[%]%^%$])", "%%%1")
-        for w in (s .. sep):gmatch("(.-)" .. esc) do table.insert(r, w) end
-        return r
-      end
-    end
-    
-    -- ── 假造 Roblox env (Vector3.zero.Dot 回 table 觸發 trip line) ──
-    local function ud() return setmetatable({}, {__metatable="userdata"}) end
-    
-    Vector3 = setmetatable({
-      zero = setmetatable({}, {
-        __metatable = "userdata",
-        __index = function(_, k)
-          if k == "Dot" then return function() return ud() end end
-          if k == "Magnitude" then return ud() end
-          if k == "Unit" then return ud() end
-        end,
-      }),
-      new = function()
-        return setmetatable({}, {
-          __metatable = "userdata",
-          __index = function(_, k)
-            if k == "Dot" then return function() return ud() end end
-            return ud()
-          end,
-        })
-      end,
-    }, {__metatable = "userdata"})
-    
-    CFrame = {new = function() return ud() end}
-    
-    Enum = setmetatable({}, {
-      __index = function()
-        return setmetatable({}, {
-          __index = function() return {Value=0, Name="Top"} end,
-          __metatable = "enums",
-        })
-      end,
-    })
-    
-    local rawType = type
-    typeof = function(v)
-      local mt = getmetatable(v)
-      if rawType(mt) == "string" then
-        if mt == "enums" then return "EnumItem" end
-        return "Vector3"
-      end
-      return rawType(v)
-    end
-    type = function(v)
-      if rawType(getmetatable(v)) == "string" then return "userdata" end
-      return rawType(v)
-    end
-    
-    game = setmetatable({PlaceId=12345}, {
-      __metatable = "userdata",
-      __index = function(_, k)
-        if k == "GetService" then
-          return function()
-            return setmetatable({}, {__index = function() return function() return "" end end, __metatable="userdata"})
-          end
-        end
-        if k == "HttpGet" then return function() return "" end end
-        if k == "HttpGetAsync" then return function() return "" end end
-      end,
-    })
-    workspace = setmetatable({}, {__metatable = "userdata"})
-    
-    -- 假裝沒有 executor-only 函式 (這樣 'if X then' defensive 檢查會 skip)
-    isfunctionhooked = nil
-    iscclosure = nil
-    islclosure = nil
-    getrenv = nil
-    getgenv = nil
-    hookfunction = nil
-    
-    -- ── Hook loadstring ──
-    _CAPTURES = {}
-    local _realLoad = loadstring or load
-    loadstring = function(s)
-      if rawType(s) == "string" then
-        table.insert(_CAPTURES, s)
-      end
-      return _realLoad(s)
-    end
-    load = loadstring
-    
-    -- ── 跑使用者腳本 ──
-    local _ok, _err = pcall(function()
-      local _fn, _le = _realLoad(_userScript)
-      if not _fn then error("LOAD: " .. tostring(_le), 0) end
-      _fn()
-    end)
-    _OK = _ok
-    _ERR = _err and tostring(_err) or nil
-  `;
-  
-  const status = lauxlib.luaL_dostring(L, to_luastring(harness));
-  if (status !== lua.LUA_OK) {
-    return { harnessErr: to_jsstring(lua.lua_tostring(L, -1)) };
-  }
-  
-  lua.lua_getglobal(L, to_luastring('_OK'));
-  const ok = lua.lua_toboolean(L, -1);
-  lua.lua_pop(L, 1);
-  
-  lua.lua_getglobal(L, to_luastring('_ERR'));
-  let err = null;
-  if (!lua.lua_isnil(L, -1)) err = to_jsstring(lua.lua_tostring(L, -1));
-  lua.lua_pop(L, 1);
-  
-  const captures = [];
-  lua.lua_getglobal(L, to_luastring('_CAPTURES'));
-  const n = lauxlib.luaL_len(L, -1);
-  for (let i = 1; i <= n; i++) {
-    lua.lua_geti(L, -1, i);
-    if (!lua.lua_isnil(L, -1)) {
-      captures.push(to_jsstring(lua.lua_tostring(L, -1)));
-    }
-    lua.lua_pop(L, 1);
-  }
-  lua.lua_pop(L, 1);
-  
-  return { ok, err, captures, scriptSize: script.length };
-}
-
-const USER_CODE_PATTERNS = [
-  /Rayfield/i,
-  /CreateWindow/,
-  /CreateTab/,
-  /CreateButton/,
-  /CreateSection/,
-  /CreateToggle/,
-  /CreateSlider/,
-  /MouseButton1Click/,
-  /UserInputService/,
-  /TweenService/,
-  /MarketplaceService/,
-];
-
-function looksLikeUserCode(s) {
-  return USER_CODE_PATTERNS.some(p => p.test(s));
-}
-
-function render(r) {
-  const out = $('output');
-  
-  if (r.harnessErr) {
-    out.innerHTML = '<div class="err">Sandbox 啟動失敗: ' + escapeHtml(r.harnessErr) + '</div>';
-    return;
-  }
-  
-  const lines = [];
-  lines.push(`<div class="meta">混淆腳本: ${r.scriptSize.toLocaleString()} bytes  ·  執行耗時: ${r.ms}ms</div>`);
-  
-  if (r.ok) {
-    lines.push('<div class="meta">執行: 完成 (沒崩潰)</div>');
-  } else {
-    lines.push('<div class="meta">執行: 崩潰  <span class="err">' + escapeHtml(r.err || '') + '</span></div>');
-  }
-  
-  lines.push(`<div class="meta">─── 抓到 ${r.captures.length} 段 loadstring 呼叫 ───</div>`);
-  
-  let userCodeFound = false;
-  for (let i = 0; i < r.captures.length; i++) {
-    const c = r.captures[i];
-    const danger = looksLikeUserCode(c);
-    if (danger) userCodeFound = true;
-    let body = c;
-    if (c.length > 1500) {
-      body = c.slice(0, 700) + '\n\n... [中間 ' + (c.length - 1400) + ' 字省略] ...\n\n' + c.slice(-700);
-    }
-    lines.push(`<div class="capture ${danger?'danger':''}">
-      <div class="label">第 ${i+1} 段 <span class="badge ${danger?'warn':''}">${c.length.toLocaleString()} 字${danger?' · ⚠ 像 Rayfield 程式碼':''}</span></div>${escapeHtml(body)}</div>`);
-  }
-  
-  let verdict;
-  if (userCodeFound) {
-    verdict = '<div class="verdict fail">✗ <strong>防護穿透</strong>: 偵測到看起來像 Rayfield 程式碼的內容被解出。需要強化混淆。</div>';
-  } else if (r.captures.length === 0) {
-    if (!r.ok) {
-      verdict = '<div class="verdict ok">✓ <strong>完美擋住</strong>: trip line 在執行到 loadstring 之前就把 deobfuscator 崩潰。對手什麼都拿不到。</div>';
-    } else {
-      verdict = '<div class="verdict ok">✓ <strong>擋住了</strong>: anti-hook 偵測到 hook 直接 return, 一次 loadstring 都沒呼叫。</div>';
-    }
-  } else if (r.captures.length === 1) {
-    verdict = '<div class="verdict ok">✓ <strong>擋住了</strong>: 只抓到 1 段, 那是 wrapper 本身的內容 (state machine、base85 字母表等)。user code 沒洩漏。</div>';
-  } else {
-    verdict = '<div class="verdict warn">⚠ <strong>抓到多段</strong>: ' + r.captures.length + ' 段, 沒看到 Rayfield 關鍵字。手動檢查內容確認沒洩 user code。</div>';
-  }
-  lines.push(verdict);
-  
-  out.innerHTML = lines.join('');
-}
-
-function escapeHtml(s) {
-  return String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+async function onVerified(token) {
+  const res = await fetch('/ts-verify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token })
+  });
+  const data = await res.json().catch(() => ({ ok: false }));
+  if (data.ok) location.reload();
 }
 </script>
-
 </body>
-</html>
+</html>`;
+
+const LOGIN_PAGE = `<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Heroine - Login</title>
+${baseStyle()}
+</head>
+<body>
+<main class="auth-shell">
+  <form class="login-card" id="login-form">
+    <div class="brand">Heroine</div>
+    <div class="muted">Sign in to continue</div>
+    <label>USER</label>
+    <input id="user" autocomplete="username" value="admin">
+    <label>PASSWORD</label>
+    <input id="password" type="password" autocomplete="current-password">
+    <button class="btn primary" type="submit">Login</button>
+    <div class="error" id="error"></div>
+  </form>
+</main>
+<script>
+const form = document.getElementById('login-form');
+form.addEventListener('submit', async event => {
+  event.preventDefault();
+  const res = await fetch('/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      user: document.getElementById('user').value,
+      password: document.getElementById('password').value
+    })
+  });
+  const data = await res.json().catch(() => ({ ok: false }));
+  if (!data.ok) {
+    document.getElementById('error').textContent = 'Login failed';
+    return;
+  }
+  addHistoryRecord('Login', 'Signed in successfully');
+  location.href = '/';
+});
+</script>
+${historyScript()}
+</body>
+</html>`;
+
+addEventListener('fetch', event => {
+  event.respondWith(handleRequest(event.request));
+});
+
+async function handleRequest(request) {
+  const url = new URL(request.url);
+  const ip = request.headers.get('CF-Connecting-IP') || '';
+
+  if (request.method === 'POST' && url.pathname === '/ts-verify') {
+    return handleTurnstileVerify(request, ip);
+  }
+
+  if (shouldBlockRequest(request)) {
+    return textResponse('403 Forbidden', 403);
+  }
+
+  if (url.pathname.startsWith('/api')) {
+    return jsonResponse({ ok: false, error: 'API features are disabled' }, 410);
+  }
+
+  const cookies = parseCookies(request.headers.get('Cookie'));
+  if (cookies.ts_ok !== '1') {
+    return htmlResponse(CHALLENGE_PAGE);
+  }
+
+  if (request.method === 'POST' && url.pathname === '/login') {
+    return handleLogin(request);
+  }
+
+  if (url.pathname === '/logout') {
+    return new Response('', {
+      status: 302,
+      headers: {
+        ...SECURITY_HEADERS,
+        'Location': '/',
+        'Set-Cookie': 'auth_ok=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax',
+      },
+    });
+  }
+
+  if (cookies.auth_ok !== '1') {
+    return htmlResponse(LOGIN_PAGE);
+  }
+
+  if (request.method !== 'GET') {
+    return textResponse('Method Not Allowed', 405);
+  }
+
+  return htmlResponse(appPage());
+}
+
+async function handleTurnstileVerify(request, ip) {
+  let token = '';
+  try {
+    const body = await request.json();
+    token = body.token || '';
+  } catch (e) {}
+
+  const ok = token && await verifyTurnstile(token, ip);
+  if (!ok) {
+    return jsonResponse({ ok: false }, 403);
+  }
+
+  return new Response(JSON.stringify({ ok: true }), {
+    status: 200,
+    headers: {
+      ...SECURITY_HEADERS,
+      'Content-Type': 'application/json',
+      'Set-Cookie': 'ts_ok=1; Path=/; Max-Age=604800; HttpOnly; SameSite=Lax',
+    },
+  });
+}
+
+async function handleLogin(request) {
+  let user = '';
+  let password = '';
+  try {
+    const body = await request.json();
+    user = String(body.user || '');
+    password = String(body.password || '');
+  } catch (e) {}
+
+  if (user !== LOGIN_USER || password !== LOGIN_PASSWORD) {
+    return jsonResponse({ ok: false }, 403);
+  }
+
+  return new Response(JSON.stringify({ ok: true }), {
+    status: 200,
+    headers: {
+      ...SECURITY_HEADERS,
+      'Content-Type': 'application/json',
+      'Set-Cookie': 'auth_ok=1; Path=/; Max-Age=86400; HttpOnly; SameSite=Lax',
+    },
+  });
+}
+
+async function verifyTurnstile(token, ip) {
+  try {
+    const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        secret: TURNSTILE_SECRET,
+        response: token,
+        remoteip: ip,
+      }),
+    });
+    const data = await res.json();
+    return data.success === true;
+  } catch (e) {
+    return false;
+  }
+}
+
+function shouldBlockRequest(request) {
+  const url = new URL(request.url);
+  const ua = (request.headers.get('User-Agent') || '').toLowerCase();
+  const accept = request.headers.get('Accept') || '';
+  const blockedUA = ['curl', 'wget', 'python', 'scrapy', 'requests', 'httpx', 'go-http', 'java', 'bot', 'spider', 'crawl', 'axios'];
+
+  if (!ua || blockedUA.some(item => ua.includes(item))) return true;
+  if (request.method === 'GET' && !accept.includes('text/html') && !url.pathname.startsWith('/assets')) return true;
+  return false;
+}
+
+function parseCookies(header) {
+  const map = {};
+  if (!header) return map;
+  for (const part of header.split(';')) {
+    const [key, ...value] = part.trim().split('=');
+    if (key) map[key.trim()] = value.join('=').trim();
+  }
+  return map;
+}
+
+function htmlResponse(html, status = 200) {
+  return new Response(html, {
+    status,
+    headers: {
+      ...SECURITY_HEADERS,
+      'Content-Type': 'text/html; charset=utf-8',
+    },
+  });
+}
+
+function jsonResponse(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: {
+      ...SECURITY_HEADERS,
+      'Content-Type': 'application/json',
+    },
+  });
+}
+
+function textResponse(text, status = 200) {
+  return new Response(text, {
+    status,
+    headers: {
+      ...SECURITY_HEADERS,
+      'Content-Type': 'text/plain; charset=utf-8',
+    },
+  });
+}
+
+function appPage() {
+  return `<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Heroine</title>
+${baseStyle()}
+</head>
+<body>
+<nav>
+  <div class="nav-logo">Heroine</div>
+  <div class="nav-links">
+    <button class="nav-link active" data-view="home">Home</button>
+    <button class="nav-link" data-view="history">History</button>
+    <a class="nav-link" href="/logout">Logout</a>
+  </div>
+</nav>
+
+<main class="page">
+  <section class="view active" id="view-home">
+    <h1>Dashboard</h1>
+    <p class="page-sub">Core shell is retained. Obfuscation and API features are disabled.</p>
+    <div class="section">
+      <div class="section-title">Status</div>
+      <div class="status-grid">
+        <div><span>Login</span><strong>Enabled</strong></div>
+        <div><span>Bot verification</span><strong>Enabled</strong></div>
+        <div><span>curl protection</span><strong>403</strong></div>
+        <div><span>Obfuscator</span><strong>Removed</strong></div>
+        <div><span>API page</span><strong>Removed</strong></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="view" id="view-history">
+    <h1>History</h1>
+    <p class="page-sub">Local browser history is kept for this UI shell.</p>
+    <div class="section">
+      <div class="section-head">
+        <div class="section-title">Recent activity</div>
+        <button class="btn ghost" id="clear-history">Clear</button>
+      </div>
+      <div id="history-list" class="history-list"></div>
+    </div>
+  </section>
+</main>
+
+<script>
+document.querySelectorAll('[data-view]').forEach(button => {
+  button.addEventListener('click', () => {
+    document.querySelectorAll('[data-view]').forEach(item => item.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(item => item.classList.remove('active'));
+    button.classList.add('active');
+    document.getElementById('view-' + button.dataset.view).classList.add('active');
+  });
+});
+
+if (!sessionStorage.getItem('heroine_session_seen')) {
+  addHistoryRecord('Open', 'Dashboard opened');
+  sessionStorage.setItem('heroine_session_seen', '1');
+}
+
+document.getElementById('clear-history').addEventListener('click', () => {
+  localStorage.removeItem('heroine_history');
+  renderHistory();
+});
+
+function renderHistory() {
+  const list = document.getElementById('history-list');
+  const rows = getHistoryRecords();
+  if (!rows.length) {
+    list.innerHTML = '<div class="empty">No history yet</div>';
+    return;
+  }
+  list.innerHTML = rows.map(row => '<div class="history-item"><div><strong>' + escapeHtml(row.title) + '</strong><span>' + escapeHtml(row.detail) + '</span></div><time>' + escapeHtml(row.time) + '</time></div>').join('');
+}
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, char => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[char]));
+}
+
+${historyHelpers()}
+renderHistory();
+</script>
+</body>
+</html>`;
+}
+
+function baseStyle() {
+  return `<style>
+:root{
+  --bg:#0d0d0d;
+  --bg2:#131313;
+  --bg3:#1b1b1b;
+  --card:#161616;
+  --border:#292929;
+  --gold:#f5c542;
+  --text:#e8e8e8;
+  --muted:#8a8a8a;
+  --red:#f87171;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{min-height:100vh;background:var(--bg);color:var(--text);font-family:Arial,sans-serif;font-size:15px}
+nav{position:sticky;top:0;z-index:10;height:64px;padding:0 36px;background:rgba(13,13,13,.96);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:24px}
+.nav-logo{font-size:23px;font-weight:700;color:var(--gold)}
+.nav-links{margin-left:auto;display:flex;align-items:center;gap:6px}
+.nav-link{border:0;background:transparent;color:var(--muted);text-decoration:none;border-radius:6px;padding:9px 14px;font:inherit;cursor:pointer}
+.nav-link:hover,.nav-link.active{background:var(--bg3);color:var(--text)}
+.page{max-width:980px;margin:0 auto;padding:48px 28px 80px}
+.view{display:none}
+.view.active{display:block}
+h1{font-size:32px;line-height:1.2;margin-bottom:8px}
+.page-sub,.muted{color:var(--muted)}
+.page-sub{margin-bottom:30px}
+.section{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:24px;margin-bottom:18px}
+.section-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:18px}
+.section-title{font-size:18px;font-weight:700;color:var(--gold);margin-bottom:18px}
+.section-head .section-title{margin-bottom:0}
+.status-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+.status-grid div{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:16px}
+.status-grid span{display:block;color:var(--muted);font-size:12px;margin-bottom:8px;text-transform:uppercase}
+.status-grid strong{font-size:16px}
+.history-list{display:flex;flex-direction:column;gap:10px}
+.history-item{display:flex;align-items:center;justify-content:space-between;gap:16px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:14px 16px}
+.history-item strong{display:block;margin-bottom:4px}
+.history-item span,.history-item time{color:var(--muted);font-size:13px}
+.empty{color:var(--muted);background:var(--bg2);border:1px dashed var(--border);border-radius:8px;padding:24px;text-align:center}
+.auth-shell{min-height:100vh;display:grid;place-items:center;padding:24px}
+.login-card{width:min(380px,100%);background:var(--card);border:1px solid var(--border);border-radius:10px;padding:32px;display:flex;flex-direction:column;gap:12px}
+.brand{font-size:26px;font-weight:700;color:var(--gold)}
+label{font-size:12px;color:var(--muted);font-weight:700;margin-top:8px}
+input{width:100%;height:42px;background:var(--bg2);border:1px solid var(--border);border-radius:7px;color:var(--text);padding:0 12px;font:inherit;outline:none}
+input:focus{border-color:var(--gold)}
+.btn{border:1px solid var(--border);border-radius:7px;height:40px;padding:0 16px;background:var(--bg3);color:var(--text);font:inherit;font-weight:700;cursor:pointer}
+.btn.primary{background:var(--gold);border-color:var(--gold);color:#000;margin-top:8px}
+.btn.ghost{background:transparent;color:var(--muted)}
+.error{min-height:18px;color:var(--red);font-size:13px}
+@media (max-width:640px){
+  nav{height:auto;padding:16px 18px;align-items:flex-start;flex-direction:column;gap:12px}
+  .nav-links{margin-left:0;flex-wrap:wrap}
+  .page{padding:32px 18px 56px}
+  .history-item{align-items:flex-start;flex-direction:column}
+}
+</style>`;
+}
+
+function historyScript() {
+  return `<script>${historyHelpers()}</script>`;
+}
+
+function historyHelpers() {
+  return `
+function getHistoryRecords() {
+  try {
+    const rows = JSON.parse(localStorage.getItem('heroine_history') || '[]');
+    return Array.isArray(rows) ? rows : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function addHistoryRecord(title, detail) {
+  const rows = getHistoryRecords();
+  rows.unshift({
+    title,
+    detail,
+    time: new Date().toLocaleString()
+  });
+  localStorage.setItem('heroine_history', JSON.stringify(rows.slice(0, 50)));
+}
+`;
+}
